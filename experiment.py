@@ -809,20 +809,32 @@ def linear_schedule(initial_value: float):
 
 
 def setup_training(config: TrainingConfig):
-    # Set up logger first
-    log_path = Path(config.log_dir)
-    log_path.mkdir(parents=True, exist_ok=True)
-    set_logger(log_path / "training_output.txt")
+    # ---------------------------------------------------------
+    # 1. Create a Unique Run Directory based on time
+    # ---------------------------------------------------------
+    # Format: inertia_MMDD_HHMM (e.g., inertia_1025_1430)
+    run_id = "inertia_" + time.strftime("%m%d_%H%M")
+    
+    # The base directory
+    base_path = Path(config.log_dir)
+    
+    # The specific folder for THIS run
+    run_dir = base_path / run_id
+    run_dir.mkdir(parents=True, exist_ok=True)
 
-    # TensorBoard log dir
-    tb_log_dir = log_path / "tb"
-    tb_log_dir.mkdir(parents=True, exist_ok=True)
+    # ---------------------------------------------------------
+    # 2. Set up the Text Logger in the unique folder
+    # ---------------------------------------------------------
+    set_logger(run_dir / "training_output.txt")
+    log(f"Initialized run directory: {run_dir}")
 
-    # Set seeds
+    # ---------------------------------------------------------
+    # 3. Standard Setup (Seeds, Contexts, Envs)
+    # ---------------------------------------------------------
     np.random.seed(config.seed)
     torch.manual_seed(config.seed)
 
-    # Create contexts: only mario_inertia varies
+    # Create contexts
     log("Generating training contexts (varying only mario_inertia)...")
     train_contexts = build_inertia_train_contexts(
         n_maps=config.n_train_maps,
@@ -839,11 +851,8 @@ def setup_training(config: TrainingConfig):
         seed=config.seed + 1,
     )
 
-    # Update counts for logging
     config.n_train_maps = len(train_contexts)
     config.n_test_maps = len(test_contexts)
-
-    # Only expose mario_inertia as a context feature to the agent
     ctx_keys = ["mario_inertia"]
 
     log("Training contexts (all):")
@@ -864,13 +873,14 @@ def setup_training(config: TrainingConfig):
     else:
         train_env = SubprocVecEnv(env_fns)
 
-    # Reward normalization only (keep images untouched)
     train_env = VecNormalize(train_env, norm_obs=False, norm_reward=True, clip_reward=10.0)
 
     log("Creating evaluation environment...")
-    eval_env = make_env_fn(test_contexts, ctx_keys)()  # keep eval env unnormalized for raw returns
+    eval_env = make_env_fn(test_contexts, ctx_keys)()
 
-    # Model with modestly larger architecture
+    # ---------------------------------------------------------
+    # 4. Model Setup
+    # ---------------------------------------------------------
     try:
         from stable_baselines3.common.torch_layers import CombinedExtractor
     except ImportError:
@@ -886,6 +896,9 @@ def setup_training(config: TrainingConfig):
     )
 
     log("Creating PPO model...")
+    
+    # We point TensorBoard to the unique run_dir. 
+    # SB3 will create a subfolder inside it (e.g., run_dir/PPO_1)
     model = PPO(
         policy="MultiInputPolicy",
         env=train_env,
@@ -903,16 +916,15 @@ def setup_training(config: TrainingConfig):
         seed=config.seed,
         device=config.device,
         policy_kwargs=policy_kwargs,
-        tensorboard_log=str(tb_log_dir),  # TensorBoard
-        verbose=0,  # keep SB3 quiet; we log ourselves
+        tensorboard_log=str(run_dir),  # <--- Modified: Logs go into the unique folder
+        verbose=0,
     )
 
-    # Evaluation callbacks: greedy and stochastic
     eval_callback_greedy = ContextualEvalCallback(
         eval_env=eval_env,
         eval_contexts=list(test_contexts.keys()),
-        eval_freq=100_000,  # 10x less frequent
-        n_eval_episodes=1,  # only 1 episode per context
+        eval_freq=100_000,
+        n_eval_episodes=1,
         deterministic=True,
         tag="greedy",
     )
@@ -933,14 +945,17 @@ def setup_training(config: TrainingConfig):
 
     callbacks = [train_printer, eval_callback_greedy, eval_callback_stoch]
 
-    return model, train_env, eval_env, callbacks, train_contexts, test_contexts
+    # Return run_dir so train() knows where to save the final model
+    return model, train_env, eval_env, callbacks, train_contexts, test_contexts, run_dir
 
 
 def train(config: TrainingConfig):
     log("=" * 50)
     log("SETTING UP TRAINING")
     log("=" * 50)
-    model, train_env, eval_env, callbacks, train_contexts, test_contexts = setup_training(config)
+    
+    # Unpack the new return value (run_dir)
+    model, train_env, eval_env, callbacks, train_contexts, test_contexts, run_dir = setup_training(config)
 
     log("Training Configuration:")
     log(f"  Train contexts: {config.n_train_maps}")
@@ -949,6 +964,7 @@ def train(config: TrainingConfig):
     log(f"  Level width: {config.level_width}")
     log(f"  Total timesteps: {config.total_timesteps:,}")
     log(f"  Device: {config.device}")
+    log(f"  Run Directory: {run_dir}")
 
     log("=" * 50)
     log("STARTING TRAINING")
@@ -957,10 +973,12 @@ def train(config: TrainingConfig):
     model.learn(
         total_timesteps=config.total_timesteps,
         callback=callbacks,
-        progress_bar=False,  # keep .txt clean
+        progress_bar=False,
         reset_num_timesteps=False,
-        #Change it to month day hours minutes 
-        tb_log_name="inertia_" + time.strftime("%m%d_%H%M")    )
+        # tb_log_name="tb" will result in: run_dir/tb_1/events...
+        # This keeps it clean inside the unique folder.
+        tb_log_name="tb" 
+    )
 
     log("=" * 50)
     log("FINAL EVALUATION")
@@ -970,19 +988,21 @@ def train(config: TrainingConfig):
     final_results = {"greedy": final_greedy, "stochastic": final_stoch}
 
     if config.save_final_model:
-        model_path = Path(config.log_dir) / "final_model.zip"
+        # Save the model inside the unique run directory
+        model_path = run_dir / "final_model.zip"
         model.save(model_path)
+        
         # Optionally save VecNormalize stats
         try:
-            train_env.save(Path(config.log_dir) / "vec_normalize.pkl")
+            train_env.save(run_dir / "vec_normalize.pkl")
         except Exception:
             pass
         log(f"Model saved to {model_path}")
 
     train_env.close()
     eval_env.close()
-    return model, final_results
-
+    
+    return model, final_results, run_dir
 
 def evaluate_final(
     model: PPO,
@@ -1068,22 +1088,24 @@ def main():
 
     config = TrainingConfig()
 
-
-    log("FAST ITERATION MODE")
-    log(f"Training config:\n{json.dumps(asdict(config), indent=2)}")
+    print("FAST ITERATION MODE") # using print here because log isn't setup yet
+    
+    # Note: We don't log the config here yet because the logger 
+    # is created inside train() -> setup_training() now.
 
     try:
-        model, results = train(config)
+        model, results, run_dir = train(config)
         log("=" * 50)
         log("TRAINING COMPLETED!")
         log("=" * 50)
-        log(f"Logs saved to {config.log_dir}/training_output.txt")
-        log(f"TensorBoard logs in: {config.log_dir}/tb")
-        log("Run: tensorboard --logdir {}/tb".format(config.log_dir))
+        log(f"All outputs saved to: {run_dir}")
+        log(f"  - Text Log: {run_dir}/training_output.txt")
+        log(f"  - Model: {run_dir}/final_model.zip")
+        log(f"  - TensorBoard: {run_dir}/tb_1")
+        log(f"Run: tensorboard --logdir {config.log_dir}") 
     finally:
         if LOGGER:
             LOGGER.close()
-
 
 if __name__ == "__main__":
     main()
