@@ -937,8 +937,8 @@ def train(config: TrainingConfig):
         callback=callbacks,
         progress_bar=False,  # keep .txt clean
         reset_num_timesteps=False,
-        tb_log_name="ppo_mario_inertia_"+str(int(time.time())),  # TensorBoard run name
-    )
+        #Change it to month day hours minutes 
+        tb_log_name="inertia_" + time.strftime("%m%d_%H%M")    )
 
     log("=" * 50)
     log("FINAL EVALUATION")
