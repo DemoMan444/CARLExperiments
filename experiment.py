@@ -295,13 +295,30 @@ class MarioObsAdapter(gym.ObservationWrapper):
                     break
 
         # Build output observation space: CHW uint8 + ctx vector
+                # Build output observation space: CHW uint8 + optional ctx vector
         if self.resize_to is None:
             raise ValueError("Please set resize_to=(W,H) to define fixed image size.")
         out_c = 1 if self.to_gray else 3
         W, H = self.resize_to
-        img_space = spaces.Box(low=0, high=255, shape=(out_c * self.frame_stack, H, W), dtype=np.uint8)
-        ctx_space = spaces.Box(low=0.0, high=1.0, shape=(len(self.ctx_keys),), dtype=np.float32)
-        self.observation_space = spaces.Dict({"img": img_space, "ctx": ctx_space})
+
+        img_space = spaces.Box(
+            low=0,
+            high=255,
+            shape=(out_c * self.frame_stack, H, W),
+            dtype=np.uint8,
+        )
+
+        if len(self.ctx_keys) == 0:
+            # No context branch at all
+            self.observation_space = spaces.Dict({"img": img_space})
+        else:
+            ctx_space = spaces.Box(
+                low=0.0,
+                high=1.0,
+                shape=(len(self.ctx_keys),),
+                dtype=np.float32,
+            )
+            self.observation_space = spaces.Dict({"img": img_space, "ctx": ctx_space})
 
         self.frames: deque[np.ndarray] = deque(maxlen=self.frame_stack)
 
@@ -399,8 +416,13 @@ class MarioObsAdapter(gym.ObservationWrapper):
         while len(self.frames) < self.frame_stack:
             self.frames.append(img)
         img_stack = np.concatenate(list(self.frames), axis=0)  # (C*k, H, W)
-        ctx_vec = self._ctx_to_vec(self._extract_context())
-        return {"img": img_stack, "ctx": ctx_vec}
+
+        if len(self.ctx_keys) == 0:
+            # No context branch
+            return {"img": img_stack}
+        else:
+            ctx_vec = self._ctx_to_vec(self._extract_context())
+            return {"img": img_stack, "ctx": ctx_vec}
 
 
 # ---------------------------
