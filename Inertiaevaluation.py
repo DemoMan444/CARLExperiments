@@ -116,7 +116,7 @@ class TrainingConfig:
     max_grad_norm: float = 1
 
     # Evaluation
-    eval_freq: int = 30_000
+    eval_freq: int = 50_000
     n_eval_episodes: int = 5
 
     # Logging
@@ -148,7 +148,7 @@ class TrainingConfig:
 
     # If True: test on the SAME maps as training (same noise_seed etc.), only inertia changes.
     # If False: test on NEW maps (different noise_seed) as in the original version.
-    test_on_train_maps: bool = True
+    test_on_train_maps: bool = False
 
 
 LEVEL_HEIGHT = 16
@@ -914,7 +914,7 @@ def make_env_fn(contexts: Dict[int, Dict], ctx_keys: List[str], monitor: bool = 
             env,
             ctx_keys=ctx_keys,
             normalize_context=True,
-            frame_stack=4,
+            frame_stack=2,
             to_gray=True,
             resize_to=(84, 84),
         )
