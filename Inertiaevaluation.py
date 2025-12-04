@@ -10,6 +10,7 @@ from gymnasium import spaces
 from dataclasses import dataclass, asdict
 from collections import deque, defaultdict, Counter
 import math
+from pyvirtualdisplay.abstractdisplay import XStartError  # add at top of file
 
 from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import BaseCallback
@@ -100,7 +101,7 @@ class TrainingConfig:
     level_width: int = 100
 
     # Training
-    total_timesteps: int = 200_000
+    total_timesteps: int = 40_000
     n_envs: int = 8
 
     # PPO
@@ -121,6 +122,8 @@ class TrainingConfig:
 
     # Logging
     log_dir: str = "./logs/mario_benchmark"
+    checkpoint_freq: int = 20_000   # <-- how often (in env steps) to save checkpoints
+
 
     # Device
     device: str = "cuda" if torch.cuda.is_available() else "cpu"
@@ -139,12 +142,11 @@ class TrainingConfig:
     print_freq: int = 10_000         # summary every N timesteps
     progress_window: int = 50        # moving window for mean stats
     episode_summaries: bool = False   # print line when episode finishes
-    sanity_check: bool = False        # run a quick single-env sanity check
     save_final_model: bool = True    # save the final model
 
     # Experiment switches
     # If True, the observation will include a "ctx" vector with (normalized) mario_inertia
-    use_context: bool = False
+    use_context: bool = True
 
     # If True: test on the SAME maps as training (same noise_seed etc.), only inertia changes.
     # If False: test on NEW maps (different noise_seed) as in the original version.
@@ -627,6 +629,8 @@ class TrainingPrinterCallback(BaseCallback):
         self.ctx_completions: Dict[int, deque] = defaultdict(lambda: deque(maxlen=self.window))
         # For distribution of contexts in the window
         self.last_ctx_ids: deque = deque(maxlen=self.window)
+        self.history: list[dict] = []   # each entry: {"timesteps": int, "mean_return": ..., "mean_completion": ...}
+
 
     def _on_step(self) -> bool:
         infos = self.locals.get("infos", [])
@@ -702,6 +706,20 @@ class TrainingPrinterCallback(BaseCallback):
 
             self._last_mean_return = mean_r
             self._last_print_ts = self.num_timesteps
+
+            mean_c_val = None if np.isnan(mean_c) else float(mean_c)
+            uniform_ctx_mean_r_val = None if np.isnan(uniform_ctx_mean_r) else float(uniform_ctx_mean_r)
+            uniform_ctx_mean_c_val = None if np.isnan(uniform_ctx_mean_c) else float(uniform_ctx_mean_c)
+
+            self.history.append(
+                {
+                    "timesteps": int(self.num_timesteps),
+                    "mean_return": float(mean_r),
+                    "mean_completion": mean_c_val,
+                    "uniform_ctx_mean_return": uniform_ctx_mean_r_val,
+                    "uniform_ctx_mean_completion": uniform_ctx_mean_c_val,
+                }
+            )
 
         return True
 
@@ -898,7 +916,40 @@ class ContextualEvalCallback(BaseCallback):
 
         return results
 
+class PeriodicCheckpointCallback(BaseCallback):
+    """
+    Save model (and VecNormalize stats, if used) every `save_freq` environment timesteps.
+    """
+    def __init__(self, save_freq: int, save_path: str | Path, name_prefix: str = "checkpoint", verbose: int = 0):
+        super().__init__(verbose)
+        self.save_freq = int(save_freq)
+        self.save_path = Path(save_path)
+        self.name_prefix = name_prefix
+        self._last_save = 0
 
+    def _on_training_start(self) -> None:
+        # Ensure directory exists
+        self.save_path.mkdir(parents=True, exist_ok=True)
+
+    def _on_step(self) -> bool:
+        # self.num_timesteps is the total number of environment steps seen so far
+        if (self.num_timesteps - self._last_save) >= self.save_freq:
+            model_path = self.save_path / f"{self.name_prefix}_{self.num_timesteps}.zip"
+            self.model.save(model_path)
+
+            # If using VecNormalize, save its statistics too
+            try:
+                from stable_baselines3.common.vec_env import VecNormalize
+                if isinstance(self.training_env, VecNormalize):
+                    vecnorm_path = self.save_path / f"vecnormalize_{self.num_timesteps}.pkl"
+                    self.training_env.save(vecnorm_path)
+            except Exception:
+                pass
+
+            log(f"Checkpoint saved at {self.num_timesteps:,} steps to {model_path}")
+            self._last_save = self.num_timesteps
+
+        return True
 # ---------------------------
 # Training Utilities
 # ---------------------------
@@ -926,33 +977,6 @@ def make_env_fn(contexts: Dict[int, Dict], ctx_keys: List[str], monitor: bool = 
     return _init
 
 
-def sanity_check_env(contexts: Dict[int, Dict], ctx_keys: List[str]) -> None:
-    log("Running sanity check on a single env...")
-    env = make_env_fn(contexts, ctx_keys, monitor=False)()
-    try:
-        log(f"Action space: {env.action_space}")
-        log(f"Observation space: {env.observation_space}")
-
-        obs, info = env.reset()
-        if isinstance(obs, dict):
-            keys = list(obs.keys())
-            log(f"Obs keys: {keys}")
-            if "img" in obs:
-                log(f"  img shape: {getattr(obs['img'], 'shape', None)} dtype: {obs['img'].dtype}")
-            if "ctx" in obs:
-                log(f"  ctx shape: {getattr(obs['ctx'], 'shape', None)} dtype: {obs['ctx'].dtype}")
-        else:
-            log(f"Obs type: {type(obs)}")
-
-        a = env.action_space.sample()
-        obs, reward, terminated, truncated, info = env.step(a)
-        log(f"One random step -> reward={float(reward):.3f}, done={terminated or truncated}, info keys={list(info.keys())}")
-    finally:
-        try:
-            env.close()
-        except Exception as e:
-            log(f"Warning: env.close() raised: {e}. Ignoring.")
-    log("Sanity check OK.")
 
 
 def linear_schedule(initial_value: float):
@@ -1037,9 +1061,6 @@ def setup_training(config: TrainingConfig):
         )
     log(f"Test contexts by type: {type_counts}")
 
-    if config.sanity_check:
-        sanity_check_env(train_contexts, ctx_keys)
-
     log(f"Creating {config.n_envs} parallel environments...")
     env_fns = [make_env_fn(train_contexts, ctx_keys) for _ in range(config.n_envs)]
 
@@ -1117,9 +1138,17 @@ def setup_training(config: TrainingConfig):
         episode_summaries=config.episode_summaries,
     )
 
-    callbacks = [train_printer, eval_callback_greedy, eval_callback_stoch]
+    checkpoint_dir = run_dir / "checkpoints"
+    checkpoint_callback = PeriodicCheckpointCallback(
+        save_freq=config.checkpoint_freq,
+        save_path=checkpoint_dir,
+        name_prefix="ppo_inertia",
+    )
 
-    return model, train_env, eval_env, callbacks, train_contexts, test_contexts, run_dir
+    callbacks = [train_printer, eval_callback_greedy, eval_callback_stoch, checkpoint_callback]
+
+    return model, train_env, eval_env, callbacks, train_contexts, test_contexts, run_dir, train_printer
+
 
 
 def evaluate_final(
@@ -1127,7 +1156,7 @@ def evaluate_final(
     eval_env: gym.Env,
     contexts: Dict[int, Dict],
     n_episodes: int = 2,
-    deterministic: bool = True,
+    deterministic: bool = False,
     tag: str = "",
 ) -> Dict[str, Any]:
     all_results = []
@@ -1279,7 +1308,7 @@ def train(config: TrainingConfig):
     log("SETTING UP TRAINING")
     log("=" * 50)
 
-    model, train_env, eval_env, callbacks, train_contexts, test_contexts, run_dir = setup_training(config)
+    model, train_env, eval_env, callbacks, train_contexts, test_contexts, run_dir, train_printer = setup_training(config)
 
     log("Training Configuration:")
     log(f"  Train contexts: {config.n_train_maps}")
@@ -1304,6 +1333,15 @@ def train(config: TrainingConfig):
         tb_log_name="tb"
     )
 
+    training_curve = getattr(train_printer, "history", [])
+    try:
+        curve_path = run_dir / "training_curve.json"
+        with curve_path.open("w") as f:
+            json.dump(training_curve, f, indent=2)
+        log(f"Saved training curve to {curve_path}")
+    except Exception as e:
+        log(f"Could not save training curve: {e}")
+
     log("=" * 50)
     log("FINAL EVALUATION")
     log("=" * 50)
@@ -1323,21 +1361,30 @@ def train(config: TrainingConfig):
         deterministic=False,
         tag="stochastic",
     )
-    final_results = {"greedy": final_greedy, "stochastic": final_stoch}
+    final_results = {
+        "greedy": final_greedy,
+        "stochastic": final_stoch,
+        "training_curve": training_curve,
+    }
 
     if config.save_final_model:
         model_path = run_dir / "final_model.zip"
         model.save(model_path)
 
-        # Optionally save VecNormalize stats
         try:
             train_env.save(run_dir / "vec_normalize.pkl")
         except Exception:
             pass
         log(f"Model saved to {model_path}")
 
-    train_env.close()
-    eval_env.close()
+    # --- make closing non-fatal ---
+    for env, name in ((train_env, "train_env"), (eval_env, "eval_env")):
+        try:
+            env.close()
+        except XStartError as e:
+            log(f"Ignoring XStartError when closing {name}: {e}")
+        except Exception as e:
+            log(f"Non-fatal error when closing {name}: {e}")
 
     return model, final_results, run_dir
 
