@@ -1,5 +1,8 @@
 # ppo_carl_mario_inertia_generalization.py
 from __future__ import annotations
+import contextlib
+import os
+import warnings
 import numpy as np
 import json
 import time
@@ -12,11 +15,41 @@ from collections import deque, defaultdict, Counter
 import math
 from pyvirtualdisplay.abstractdisplay import XStartError  # add at top of file
 
-from stable_baselines3 import PPO
-from stable_baselines3.common.callbacks import BaseCallback
 import torch
-from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, VecNormalize
-from stable_baselines3.common.monitor import Monitor
+
+# Reduce noisy import-time output in subprocess workers (SubprocVecEnv).
+os.environ.setdefault("PYGAME_HIDE_SUPPORT_PROMPT", "1")
+os.environ.setdefault("GYM_DISABLE_WARNINGS", "1")
+
+warnings.filterwarnings(
+    "ignore",
+    message=r"pkg_resources is deprecated as an API\..*",
+    category=UserWarning,
+)
+warnings.filterwarnings(
+    "ignore",
+    message=r"Module distance not found\..*",
+    category=UserWarning,
+)
+warnings.filterwarnings(
+    "ignore",
+    message=r"You are using `torch\.load` with `weights_only=False`.*",
+    category=FutureWarning,
+)
+
+
+@contextlib.contextmanager
+def _suppress_output():
+    with open(os.devnull, "w") as devnull:
+        with contextlib.redirect_stdout(devnull), contextlib.redirect_stderr(devnull):
+            yield
+
+
+with _suppress_output():
+    from stable_baselines3 import PPO
+    from stable_baselines3.common.callbacks import BaseCallback
+    from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, VecNormalize
+    from stable_baselines3.common.monitor import Monitor
 
 # Optional image libs
 try:
@@ -33,18 +66,19 @@ except Exception:
     Image = None
     _HAS_PIL = False
 
-# CARL imports
-from carl.envs.mario.pcg_smb_env import MarioEnv
-from carl.envs.carl_env import CARLEnv
-from carl.utils.types import Contexts
-from carl.context.context_space import (
-    CategoricalContextFeature,
-    ContextFeature,
-    UniformFloatContextFeature,
-    UniformIntegerContextFeature,
-)
-from carl.context.selection import AbstractSelector
-from carl.envs.mario.pcg_smb_env.toadgan.toad_gan import generate_level
+# CARL imports (quiet to avoid optional-dependency spam in workers)
+with _suppress_output():
+    from carl.envs.mario.pcg_smb_env import MarioEnv
+    from carl.envs.carl_env import CARLEnv
+    from carl.utils.types import Contexts
+    from carl.context.context_space import (
+        CategoricalContextFeature,
+        ContextFeature,
+        UniformFloatContextFeature,
+        UniformIntegerContextFeature,
+    )
+    from carl.context.selection import AbstractSelector
+    from carl.envs.mario.pcg_smb_env.toadgan.toad_gan import generate_level
 
 
 # ---------------------------
@@ -118,7 +152,7 @@ class TrainingConfig:
 
     # Evaluation
     eval_freq: int = 50_000
-    n_eval_episodes: int = 5
+    n_eval_episodes: int = 3
 
     # Logging
     log_dir: str = "./logs/mario_benchmark"
@@ -218,6 +252,13 @@ class CARLMarioEnv(CARLEnv):
         self.episode_stats = {"steps": 0, "reward": 0.0, "completion": 0.0, "success": False}
         obs, info = super().reset(**kwargs)
         return obs, info
+
+    def close(self):
+        try:
+            return super().close()
+        except XStartError:
+            # pyvirtualdisplay wasn't started (common in headless SubprocVecEnv workers)
+            return None
 
     def step(self, action):
         obs, reward, terminated, truncated, info = super().step(action)
@@ -623,6 +664,7 @@ class TrainingPrinterCallback(BaseCallback):
         self.ep_lengths = deque(maxlen=self.window)
         self.ep_completions = deque(maxlen=self.window)
         self.total_episodes = 0
+        self.episode_history: list[dict] = []
 
         # For uniform-per-context metrics
         self.ctx_returns: Dict[int, deque] = defaultdict(lambda: deque(maxlen=self.window))
@@ -651,6 +693,16 @@ class TrainingPrinterCallback(BaseCallback):
                 self.total_episodes += 1
 
                 ctx_id = info.get("context_id", None)
+                self.episode_history.append(
+                    {
+                        "timesteps": int(self.num_timesteps),
+                        "episode": int(self.total_episodes),
+                        "return": float(ep_r),
+                        "length": int(ep_l),
+                        "completion": (None if completion is None else float(completion)),
+                        "context_id": (None if ctx_id is None else int(ctx_id)),
+                    }
+                )
                 if ctx_id is not None:
                     self.ctx_returns[ctx_id].append(ep_r)
                     if completion is not None:
@@ -1113,15 +1165,6 @@ def setup_training(config: TrainingConfig):
         verbose=0,
     )
 
-    eval_callback_greedy = ContextualEvalCallback(
-        eval_env=eval_env,
-        eval_contexts=list(test_contexts.keys()),
-        eval_freq=100_000,
-        n_eval_episodes=1,
-        deterministic=True,
-        tag="greedy",
-        ctx_dict=test_contexts,
-    )
     eval_callback_stoch = ContextualEvalCallback(
         eval_env=eval_env,
         eval_contexts=list(test_contexts.keys()),
@@ -1145,7 +1188,7 @@ def setup_training(config: TrainingConfig):
         name_prefix="ppo_inertia",
     )
 
-    callbacks = [train_printer, eval_callback_greedy, eval_callback_stoch, checkpoint_callback]
+    callbacks = [train_printer, eval_callback_stoch, checkpoint_callback]
 
     return model, train_env, eval_env, callbacks, train_contexts, test_contexts, run_dir, train_printer
 
@@ -1314,6 +1357,7 @@ def train(config: TrainingConfig):
     log(f"  Train contexts: {config.n_train_maps}")
     log(f"  Test contexts: {config.n_test_maps}")
     log(f"  Parallel envs: {config.n_envs}")
+    log(f"  Seed: {config.seed}")
     log(f"  Level width: {config.level_width}")
     log(f"  Total timesteps: {config.total_timesteps:,}")
     log(f"  Device: {config.device}")
@@ -1334,6 +1378,7 @@ def train(config: TrainingConfig):
     )
 
     training_curve = getattr(train_printer, "history", [])
+    episode_history = getattr(train_printer, "episode_history", [])
     try:
         curve_path = run_dir / "training_curve.json"
         with curve_path.open("w") as f:
@@ -1342,17 +1387,17 @@ def train(config: TrainingConfig):
     except Exception as e:
         log(f"Could not save training curve: {e}")
 
+    try:
+        ep_path = run_dir / "episode_history.json"
+        with ep_path.open("w") as f:
+            json.dump(episode_history, f, indent=2)
+        log(f"Saved episode history to {ep_path}")
+    except Exception as e:
+        log(f"Could not save episode history: {e}")
+
     log("=" * 50)
     log("FINAL EVALUATION")
     log("=" * 50)
-    final_greedy = evaluate_final(
-        model,
-        eval_env,
-        test_contexts,
-        n_episodes=config.n_eval_episodes,
-        deterministic=True,
-        tag="greedy",
-    )
     final_stoch = evaluate_final(
         model,
         eval_env,
@@ -1362,9 +1407,9 @@ def train(config: TrainingConfig):
         tag="stochastic",
     )
     final_results = {
-        "greedy": final_greedy,
         "stochastic": final_stoch,
         "training_curve": training_curve,
+        "episode_history": episode_history,
     }
 
     if config.save_final_model:
