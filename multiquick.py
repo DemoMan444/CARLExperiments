@@ -19,11 +19,65 @@ from Inertiaevaluation import TrainingConfig, train
 # ============================================================================
 # Set to True for quick testing (verify code works)
 # Set to False for full experiment (proper evaluation)
-QUICK_TEST = True
+QUICK_TEST = False
 
 # Smoothing for episode-level reward curve (higher = smoother)
 EPISODE_RETURN_SMOOTH_WINDOW = 50
 # ============================================================================
+
+def t_critical_975(df: int) -> float:
+    """
+    Two-sided 95% CI critical value: t_{0.975, df}.
+
+    With small numbers of seeds (e.g., 5–7), this is more appropriate than the
+    normal approximation (1.96).
+    """
+    if df <= 0:
+        return 0.0
+
+    table = {
+        1: 12.706,
+        2: 4.303,
+        3: 3.182,
+        4: 2.776,
+        5: 2.571,
+        6: 2.447,
+        7: 2.365,
+        8: 2.306,
+        9: 2.262,
+        10: 2.228,
+        11: 2.201,
+        12: 2.179,
+        13: 2.160,
+        14: 2.145,
+        15: 2.131,
+        16: 2.120,
+        17: 2.110,
+        18: 2.101,
+        19: 2.093,
+        20: 2.086,
+        21: 2.080,
+        22: 2.074,
+        23: 2.069,
+        24: 2.064,
+        25: 2.060,
+        26: 2.056,
+        27: 2.052,
+        28: 2.048,
+        29: 2.045,
+        30: 2.042,
+        40: 2.021,
+        60: 2.000,
+        120: 1.980,
+    }
+    if df in table:
+        return table[df]
+    if df > 120:
+        return 1.960
+
+    # Choose nearest available df (keeps this dependency-free and stable).
+    nearest = min(table.keys(), key=lambda k: abs(k - df))
+    return table[nearest]
 
 
 def get_config() -> TrainingConfig:
@@ -46,9 +100,9 @@ def get_config() -> TrainingConfig:
         cfg.n_eval_episodes = 5
         cfg.n_train_maps = 5
         cfg.n_test_maps = 5
-        cfg.eval_freq = 10_000
+        cfg.eval_freq = 50_000
         cfg.print_freq = 5_000
-        cfg.checkpoint_freq = 10_000
+        cfg.checkpoint_freq = 30_000
         cfg.n_envs = 8
     
     return cfg
@@ -231,7 +285,7 @@ def aggregate_runs(runs: list[dict]) -> dict:
             r_mean = float(r_vals.mean())
             r_std = float(r_vals.std(ddof=1)) if r_vals.size > 1 else 0.0
             r_se = r_std / np.sqrt(r_vals.size) if r_vals.size > 1 else 0.0
-            r_ci = 1.96 * r_se if r_vals.size > 1 else 0.0
+            r_ci = t_critical_975(int(r_vals.size) - 1) * r_se if r_vals.size > 1 else 0.0
         else:
             r_mean = r_std = r_ci = float("nan")
 
@@ -239,7 +293,7 @@ def aggregate_runs(runs: list[dict]) -> dict:
             c_mean = float(c_vals.mean())
             c_std = float(c_vals.std(ddof=1)) if c_vals.size > 1 else 0.0
             c_se = c_std / np.sqrt(c_vals.size) if c_vals.size > 1 else 0.0
-            c_ci = 1.96 * c_se if c_vals.size > 1 else 0.0
+            c_ci = t_critical_975(int(c_vals.size) - 1) * c_se if c_vals.size > 1 else 0.0
         else:
             c_mean = c_std = c_ci = float("nan")
 
@@ -332,6 +386,9 @@ def plot_multi_seed_training_and_eval(
     # ---- Episode-level return curve (smoothed running average) ----
     has_episode_history = any(run["results"].get("episode_history") for run in all_runs)
     if has_episode_history:
+        # Collect per-seed smoothed curves (episode return vs episode-end timesteps)
+        seed_curves: list[tuple[np.ndarray, np.ndarray]] = []
+
         plt.figure(figsize=(7, 5))
         for run in all_runs:
             eps = run["results"].get("episode_history", [])
@@ -354,6 +411,7 @@ def plot_multi_seed_training_and_eval(
             seed_label = run.get("seed", None)
             label = f"seed {seed_label}" if seed_label is not None else None
             plt.plot(smooth_t, smooth_r, alpha=0.8, linewidth=1.2, label=label)
+            seed_curves.append((smooth_t, np.asarray(smooth_r, dtype=float)))
 
         plt.xlabel("Environment steps")
         plt.ylabel(f"Episode return (running mean, window={EPISODE_RETURN_SMOOTH_WINDOW})")
@@ -363,6 +421,49 @@ def plot_multi_seed_training_and_eval(
         plt.tight_layout()
         plt.savefig(base / "training_episode_return_running_mean_multi_seed.png", dpi=150)
         plt.close()
+
+        # ---- Aggregate mean + 95% CI over seeds (aligned on a shared timestep grid) ----
+        if len(seed_curves) >= 2:
+            # Shared grid = all episode-end timesteps observed across seeds
+            grid = np.unique(np.concatenate([t for t, _ in seed_curves])).astype(int)
+
+            # Forward-fill each seed's curve onto the grid (value at or before timestep)
+            per_seed_vals = []
+            for t_seed, r_seed in seed_curves:
+                idx = np.searchsorted(t_seed, grid, side="right") - 1
+                vals = np.where(idx >= 0, r_seed[idx], np.nan)
+                per_seed_vals.append(vals)
+
+            mat = np.vstack(per_seed_vals)  # shape: (n_seeds, n_grid)
+            n = np.sum(~np.isnan(mat), axis=0)
+            mean = np.nanmean(mat, axis=0)
+
+            # sample std with ddof=1 where n>=2
+            std = np.nanstd(mat, axis=0, ddof=1)
+            se = np.where(n > 1, std / np.sqrt(n), 0.0)
+            tcrit = np.array([t_critical_975(int(k) - 1) if k > 1 else 0.0 for k in n], dtype=float)
+            ci = tcrit * se
+
+            valid = n > 1
+            if np.any(valid):
+                plt.figure(figsize=(7, 5))
+                plt.plot(grid[valid], mean[valid], color="C0", linewidth=1.8, label="mean episode return")
+                plt.fill_between(
+                    grid[valid],
+                    mean[valid] - ci[valid],
+                    mean[valid] + ci[valid],
+                    color="C0",
+                    alpha=0.2,
+                    label="95% CI (t)",
+                )
+                plt.xlabel("Environment steps")
+                plt.ylabel(f"Episode return (running mean, window={EPISODE_RETURN_SMOOTH_WINDOW})")
+                plt.title("Training episode return vs steps (smoothed, mean ± 95% CI)")
+                plt.grid(True, alpha=0.3)
+                plt.legend(loc="best", fontsize=8, frameon=False)
+                plt.tight_layout()
+                plt.savefig(base / "training_episode_return_running_mean_ci_multi_seed.png", dpi=150)
+                plt.close()
 
     curve = agg.get("training_curve", {})
     if curve and curve.get("timesteps"):
@@ -428,7 +529,10 @@ def plot_multi_seed_training_and_eval(
         comp_std = np.array([per_inertia[i]["mean_completion_std"] for i in inertias], dtype=float)
         ns = np.array([per_inertia[i]["n"] for i in inertias], dtype=float)
         se = np.where(ns > 1, comp_std / np.sqrt(ns), 0.0)
-        ci = 1.96 * se
+        ci = np.array(
+            [t_critical_975(int(n) - 1) * s if n > 1 else 0.0 for n, s in zip(ns, se)],
+            dtype=float,
+        )
 
         plt.figure(figsize=(7, 5))
         plt.errorbar(
