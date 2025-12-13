@@ -169,8 +169,16 @@ class TrainingConfig:
         (0.8, 0.9),
         (1.1, 1.2),
     )
+    # If True, sample a new mario_inertia every episode (from the ranges above).
+    # For performance/reproducibility we rotate through a fixed pre-sampled pool.
+    resample_train_inertia_each_episode: bool = True
+    train_inertia_pool_size: int = 100
+
+    # Final eval on training maps: budget controls (keeps runtime similar to test eval)
+    train_final_eval_n_inertias: int = 100
+    train_final_eval_n_episodes: int = 1
     # Evaluate on this grid of inertias
-    eval_inertias: Tuple[float, ...] = (0.5, 0.55, 0.6, 0.7, 0.85, 1.1)
+    eval_inertias: Tuple[float, ...] = (0.6, 0.85, 1, 1.15, 1.4)
 
     # Simple logging toggles
     print_freq: int = 10_000         # summary every N timesteps
@@ -180,11 +188,15 @@ class TrainingConfig:
 
     # Experiment switches
     # If True, the observation will include a "ctx" vector with (normalized) mario_inertia
-    use_context: bool = True
+    use_context: bool = False
 
     # If True: test on the SAME maps as training (same noise_seed etc.), only inertia changes.
     # If False: test on NEW maps (different noise_seed) as in the original version.
     test_on_train_maps: bool = False
+
+    # If True, do an additional final evaluation on the exact training contexts
+    # (same maps AND the same inertia values sampled for training).
+    final_eval_on_train_contexts: bool = True
 
 
 LEVEL_HEIGHT = 16
@@ -280,6 +292,7 @@ class CARLMarioEnv(CARLEnv):
             }
             info["context_id"] = int(self.context_id)
             info["level_width"] = int(self.context["level_width"])
+            info["mario_inertia"] = float(self.context["mario_inertia"])
 
         return obs, reward, terminated, truncated, info
 
@@ -519,6 +532,7 @@ def build_inertia_train_contexts(
     level_width: int,
     inertia_ranges: Sequence[Tuple[float, float]],
     seed: int = 42,
+    sample_inertia: bool = True,
 ) -> Dict[int, Dict[str, Any]]:
     """
     Build training contexts as a *cross product* of:
@@ -527,7 +541,7 @@ def build_inertia_train_contexts(
 
     Total contexts = n_maps * len(inertia_ranges).
     """
-    np.random.seed(seed)
+    rng = np.random.RandomState(int(seed))
     ctxs: Dict[int, Dict[str, Any]] = {}
     ctx_id = 0
 
@@ -535,8 +549,14 @@ def build_inertia_train_contexts(
         # one distinct map per map_idx
         noise_seed = seed + map_idx
 
-        for (low, high) in inertia_ranges:
-            inertia = float(np.random.uniform(low, high))
+        for range_idx, (low, high) in enumerate(inertia_ranges):
+            low_f = float(low)
+            high_f = float(high)
+            inertia = (
+                float(rng.uniform(low_f, high_f))
+                if sample_inertia
+                else float((low_f + high_f) / 2.0)
+            )
 
             ctxs[ctx_id] = {
                 "level_width": int(level_width),
@@ -544,10 +564,117 @@ def build_inertia_train_contexts(
                 "noise_seed": noise_seed,  # this fixes the map identity
                 "mario_state": 0,
                 "mario_inertia": inertia,
+                "train_range_index": int(range_idx),
             }
             ctx_id += 1
 
     return ctxs
+
+
+def build_inertia_pools(
+    inertia_ranges: Sequence[Tuple[float, float]],
+    pool_size: int,
+    seed: int,
+) -> list[list[float]]:
+    rng = np.random.RandomState(int(seed))
+    pools: list[list[float]] = []
+    for (low, high) in inertia_ranges:
+        low_f = float(low)
+        high_f = float(high)
+        vals = rng.uniform(low_f, high_f, size=int(pool_size)).astype(np.float32)
+        rng.shuffle(vals)
+        pools.append([float(x) for x in vals])
+    return pools
+
+
+def _unique_train_maps(train_contexts: Dict[int, Dict[str, Any]]) -> list[Dict[str, Any]]:
+    maps: list[Dict[str, Any]] = []
+    seen = set()
+    for ctx in train_contexts.values():
+        key = (
+            int(ctx["level_width"]),
+            int(ctx["level_index"]),
+            int(ctx["noise_seed"]),
+            int(ctx["mario_state"]),
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        maps.append(
+            {
+                "level_width": int(ctx["level_width"]),
+                "level_index": int(ctx["level_index"]),
+                "noise_seed": int(ctx["noise_seed"]),
+                "mario_state": int(ctx["mario_state"]),
+            }
+        )
+    return maps
+
+
+def build_train_eval_contexts_sampled(
+    train_contexts: Dict[int, Dict[str, Any]],
+    inertia_values: Sequence[float],
+    seed: int,
+) -> Dict[int, Dict[str, Any]]:
+    """
+    Build ~len(inertia_values) contexts on the training maps, pairing each inertia
+    with a map (rotating through unique training maps). This avoids the full
+    cross-product (maps x inertias) for runtime.
+    """
+    maps = _unique_train_maps(train_contexts)
+    if not maps:
+        return {}
+    inertias = [float(x) for x in inertia_values]
+    rng = np.random.RandomState(int(seed))
+    rng.shuffle(inertias)
+
+    ctxs: Dict[int, Dict[str, Any]] = {}
+    for i, inertia in enumerate(inertias):
+        map_params = maps[i % len(maps)]
+        ctxs[int(i)] = {
+            **map_params,
+            "mario_inertia": float(inertia),
+            "gen_type": "train",
+        }
+    return ctxs
+
+
+class TrainInertiaResampleWrapper(gym.Wrapper):
+    def __init__(
+        self,
+        env: gym.Env,
+        contexts: Dict[int, Dict[str, Any]],
+        inertia_pools: list[list[float]],
+        seed: int,
+    ):
+        super().__init__(env)
+        self.contexts = contexts
+        self.context_ids = [int(k) for k in contexts.keys()]
+        self.inertia_pools = inertia_pools
+        self.pool_pos = [0 for _ in inertia_pools]
+        self.rng = np.random.RandomState(int(seed))
+        self.ctx_to_range_idx: Dict[int, int] = {}
+        for ctx_id, ctx in contexts.items():
+            ridx = ctx.get("train_range_index", 0)
+            self.ctx_to_range_idx[int(ctx_id)] = int(ridx)
+
+    def reset(self, **kwargs):
+        options = kwargs.get("options") or {}
+        if "context_id" in options:
+            ctx_id = int(options["context_id"])
+        else:
+            ctx_id = int(self.rng.choice(self.context_ids))
+            kwargs["options"] = dict(options)
+            kwargs["options"]["context_id"] = ctx_id
+
+        range_idx = int(self.ctx_to_range_idx.get(ctx_id, 0))
+        pool = self.inertia_pools[range_idx]
+        pos = int(self.pool_pos[range_idx])
+        inertia = float(pool[pos])
+        self.pool_pos[range_idx] = (pos + 1) % len(pool)
+        self.contexts[ctx_id]["mario_inertia"] = inertia
+
+        return self.env.reset(**kwargs)
 
 
 def build_inertia_test_contexts(
@@ -683,8 +810,14 @@ class TrainingPrinterCallback(BaseCallback):
                 ep_r = float(info["episode"].get("r", 0.0))
                 ep_l = int(info["episode"].get("l", 0))
                 completion = None
+                success = None
+                inertia = None
                 if "episode_stats" in info:
-                    completion = float(info["episode_stats"].get("completion", 0.0))
+                    stats = info["episode_stats"]
+                    completion = float(stats.get("completion", 0.0))
+                    success = bool(stats.get("success", completion >= 0.999))
+                if "mario_inertia" in info:
+                    inertia = float(info["mario_inertia"])
 
                 self.ep_returns.append(ep_r)
                 self.ep_lengths.append(ep_l)
@@ -700,6 +833,8 @@ class TrainingPrinterCallback(BaseCallback):
                         "return": float(ep_r),
                         "length": int(ep_l),
                         "completion": (None if completion is None else float(completion)),
+                        "success": (None if success is None else bool(success)),
+                        "mario_inertia": (None if inertia is None else float(inertia)),
                         "context_id": (None if ctx_id is None else int(ctx_id)),
                     }
                 )
@@ -1005,7 +1140,16 @@ class PeriodicCheckpointCallback(BaseCallback):
 # ---------------------------
 # Training Utilities
 # ---------------------------
-def make_env_fn(contexts: Dict[int, Dict], ctx_keys: List[str], monitor: bool = True):
+def make_env_fn(
+    contexts: Dict[int, Dict],
+    ctx_keys: List[str],
+    monitor: bool = True,
+    *,
+    resample_train_inertia: bool = False,
+    inertia_pools: Optional[list[list[float]]] = None,
+    base_seed: int = 0,
+    env_rank: int = 0,
+):
     def _init():
         env = CARLMarioEnv(
             contexts=contexts,
@@ -1023,6 +1167,15 @@ def make_env_fn(contexts: Dict[int, Dict], ctx_keys: List[str], monitor: bool = 
         )
         # Action repeat (frame skip)
         env = ActionRepeat(env, repeat=4, max_pool=True)
+        if resample_train_inertia:
+            if inertia_pools is None:
+                raise ValueError("resample_train_inertia requested but inertia_pools is None")
+            env = TrainInertiaResampleWrapper(
+                env,
+                contexts=contexts,
+                inertia_pools=inertia_pools,
+                seed=int(base_seed) + 10_000 * int(env_rank) + 123,
+            )
         if monitor:
             env = Monitor(env)
         return env
@@ -1042,9 +1195,12 @@ def setup_training(config: TrainingConfig):
     # ---------------------------------------------------------
     # 1. Create a Unique Run Directory based on time
     # ---------------------------------------------------------
-    run_id = "inertia_" + time.strftime("%m%d_%H%M")
+    run_id = "inertia_" + time.strftime("%m%d_%H%M%S")
     base_path = Path(config.log_dir)
     run_dir = base_path / run_id
+    # Avoid collisions if multiple runs start within the same second.
+    if run_dir.exists():
+        run_dir = base_path / f"{run_id}_{int(time.time() * 1000) % 1_000_000:06d}"
     run_dir.mkdir(parents=True, exist_ok=True)
 
     # ---------------------------------------------------------
@@ -1066,7 +1222,22 @@ def setup_training(config: TrainingConfig):
         level_width=config.level_width,
         inertia_ranges=config.train_inertia_ranges,
         seed=config.seed + 1,
+        sample_inertia=not bool(config.resample_train_inertia_each_episode),
     )
+
+    inertia_pools: Optional[list[list[float]]] = None
+    train_inertia_values: Optional[list[float]] = None
+    if config.resample_train_inertia_each_episode:
+        inertia_pools = build_inertia_pools(
+            inertia_ranges=config.train_inertia_ranges,
+            pool_size=config.train_inertia_pool_size,
+            seed=config.seed + 777,
+        )
+        train_inertia_values = sorted(float(v) for pool in inertia_pools for v in pool)
+        log(
+            "Training inertia resampling enabled: "
+            f"{len(config.train_inertia_ranges)} ranges x {config.train_inertia_pool_size} values (rotating pool)"
+        )
 
     # Create test contexts: either on TRAIN MAPS or NEW MAPS
     if config.test_on_train_maps:
@@ -1114,7 +1285,17 @@ def setup_training(config: TrainingConfig):
     log(f"Test contexts by type: {type_counts}")
 
     log(f"Creating {config.n_envs} parallel environments...")
-    env_fns = [make_env_fn(train_contexts, ctx_keys) for _ in range(config.n_envs)]
+    env_fns = [
+        make_env_fn(
+            train_contexts,
+            ctx_keys,
+            resample_train_inertia=bool(config.resample_train_inertia_each_episode),
+            inertia_pools=inertia_pools,
+            base_seed=int(config.seed),
+            env_rank=int(i),
+        )
+        for i in range(config.n_envs)
+    ]
 
     if config.n_envs == 1:
         train_env = DummyVecEnv(env_fns)
@@ -1125,6 +1306,31 @@ def setup_training(config: TrainingConfig):
 
     log("Creating evaluation environment...")
     eval_env = make_env_fn(test_contexts, ctx_keys)()
+
+    train_eval_contexts = train_contexts
+    train_eval_inertias: Optional[list[float]] = None
+    if config.resample_train_inertia_each_episode and train_inertia_values is not None:
+        n = int(config.train_final_eval_n_inertias)
+        if n <= 0:
+            train_eval_contexts = {}
+        else:
+            if len(train_inertia_values) <= n:
+                train_eval_inertias = list(train_inertia_values)
+            else:
+                rng = np.random.RandomState(int(config.seed) + 999)
+                idx = rng.choice(len(train_inertia_values), size=n, replace=False)
+                train_eval_inertias = [float(train_inertia_values[i]) for i in idx]
+            train_eval_contexts = build_train_eval_contexts_sampled(
+                train_contexts=train_contexts,
+                inertia_values=train_eval_inertias,
+                seed=int(config.seed) + 1001,
+            )
+        log(
+            f"Train final eval contexts: {len(train_eval_contexts)} "
+            f"(n_inertias={len(train_eval_inertias) if train_eval_inertias is not None else 0})"
+        )
+
+    train_eval_env = make_env_fn(train_eval_contexts, ctx_keys)()
 
     # ---------------------------------------------------------
     # 4. Model Setup
@@ -1190,7 +1396,19 @@ def setup_training(config: TrainingConfig):
 
     callbacks = [train_printer, eval_callback_stoch, checkpoint_callback]
 
-    return model, train_env, eval_env, callbacks, train_contexts, test_contexts, run_dir, train_printer
+    return (
+        model,
+        train_env,
+        eval_env,
+        train_eval_env,
+        callbacks,
+        train_contexts,
+        train_eval_contexts,
+        test_contexts,
+        run_dir,
+        train_printer,
+        train_inertia_values,
+    )
 
 
 
@@ -1201,6 +1419,8 @@ def evaluate_final(
     n_episodes: int = 2,
     deterministic: bool = False,
     tag: str = "",
+    inertia_ranges: Optional[Sequence[Tuple[float, float]]] = None,
+    summarize_inertia_by_ranges: bool = False,
 ) -> Dict[str, Any]:
     all_results = []
 
@@ -1309,6 +1529,39 @@ def evaluate_final(
         }
     summary["per_inertia"] = per_inertia
 
+    # Per training-range summary (optional)
+    if inertia_ranges is not None and len(inertia_ranges) > 0:
+        range_stats = defaultdict(lambda: {"returns": [], "completions": [], "lengths": [], "successes": []})
+        for r in all_results:
+            inertia = float(r["context_params"]["mario_inertia"])
+            range_idx: Optional[int] = None
+            for i, (lo, hi) in enumerate(inertia_ranges):
+                if float(lo) <= inertia <= float(hi):
+                    range_idx = int(i)
+                    break
+            key = (
+                f"range_{range_idx}:{float(inertia_ranges[range_idx][0]):.3f}-{float(inertia_ranges[range_idx][1]):.3f}"
+                if range_idx is not None
+                else "other"
+            )
+            range_stats[key]["returns"].append(r["return"])
+            range_stats[key]["completions"].append(r["completion"])
+            range_stats[key]["lengths"].append(r["length"])
+            range_stats[key]["successes"].append(1.0 if r["success"] else 0.0)
+
+        per_range: Dict[str, Any] = {}
+        for key, vals in range_stats.items():
+            if len(vals["returns"]) == 0:
+                continue
+            per_range[key] = {
+                "mean_return": float(np.mean(vals["returns"])),
+                "mean_completion": float(np.mean(vals["completions"])),
+                "mean_length": float(np.mean(vals["lengths"])),
+                "success_rate": float(np.mean(vals["successes"])),
+                "n_episodes": len(vals["returns"]),
+            }
+        summary["per_range"] = per_range
+
     # Logging
     log("=" * 50)
     log(f"FINAL EVALUATION RESULTS{(' ['+tag+']') if tag else ''} (deterministic={deterministic})")
@@ -1330,18 +1583,174 @@ def evaluate_final(
             )
 
     if len(per_inertia) > 0:
-        log("Per-inertia summary:")
-        for inertia in sorted(per_inertia.keys()):
-            s = per_inertia[inertia]
-            log(
-                f"  inertia={inertia:.3f}: "
-                f"mean_return={s['mean_return']:.2f}, "
-                f"mean_completion={s['mean_completion']:.2%}, "
-                f"success_rate={s['success_rate']:.2%}, "
-                f"n_episodes={s['n_episodes']}"
-            )
+        if summarize_inertia_by_ranges and "per_range" in summary:
+            log("Per-range summary (collapsed from per-inertia):")
+            for key in sorted(summary["per_range"].keys()):
+                s = summary["per_range"][key]
+                log(
+                    f"  {key}: "
+                    f"mean_return={s['mean_return']:.2f}, "
+                    f"mean_completion={s['mean_completion']:.2%}, "
+                    f"success_rate={s['success_rate']:.2%}, "
+                    f"n_episodes={s['n_episodes']}"
+                )
+            log(f"(Per-inertia details saved in JSON: {len(per_inertia)} values)")
+        else:
+            log("Per-inertia summary:")
+            for inertia in sorted(per_inertia.keys()):
+                s = per_inertia[inertia]
+                log(
+                    f"  inertia={inertia:.3f}: "
+                    f"mean_return={s['mean_return']:.2f}, "
+                    f"mean_completion={s['mean_completion']:.2%}, "
+                    f"success_rate={s['success_rate']:.2%}, "
+                    f"n_episodes={s['n_episodes']}"
+                )
 
     log("=" * 50)
+
+    return summary
+
+
+def summarize_training_episodes(
+    episode_history: list[dict],
+    contexts: Dict[int, Dict[str, Any]],
+    tag: str = "training",
+) -> Dict[str, Any]:
+    episodes = []
+    for ep in episode_history:
+        ctx_id = ep.get("context_id", None)
+        if ctx_id is None or ctx_id not in contexts:
+            continue
+        ctx_params = dict(contexts[int(ctx_id)])
+        if ep.get("mario_inertia", None) is not None:
+            ctx_params["mario_inertia"] = float(ep["mario_inertia"])
+        episodes.append(
+            {
+                "timesteps": int(ep.get("timesteps", 0)),
+                "episode": int(ep.get("episode", 0)),
+                "context_id": int(ctx_id),
+                "context_params": ctx_params,
+                "return": float(ep.get("return", 0.0)),
+                "length": int(ep.get("length", 0)),
+                "completion": ep.get("completion", None),
+                "success": ep.get("success", None),
+            }
+        )
+
+    returns = [float(r["return"]) for r in episodes]
+    lengths = [int(r["length"]) for r in episodes]
+    completions = [
+        float(r["completion"]) for r in episodes if r.get("completion", None) is not None
+    ]
+    successes = [
+        1.0 for r in episodes if r.get("success", None) is True
+    ] + [
+        0.0 for r in episodes if r.get("success", None) is False
+    ]
+
+    summary: Dict[str, Any] = {
+        "tag": tag,
+        "n_episodes": int(len(episodes)),
+        "mean_return": float(np.mean(returns)) if returns else float("nan"),
+        "std_return": float(np.std(returns)) if returns else float("nan"),
+        "mean_completion": float(np.mean(completions)) if completions else float("nan"),
+        "std_completion": float(np.std(completions)) if completions else float("nan"),
+        "mean_length": float(np.mean(lengths)) if lengths else float("nan"),
+        "success_rate": float(np.mean(successes)) if successes else float("nan"),
+    }
+
+    # Per context summary (episode-weighted within context)
+    per_context: Dict[int, Dict[str, Any]] = defaultdict(lambda: {"returns": [], "completions": [], "successes": [], "lengths": [], "inertias": []})
+    for r in episodes:
+        ctx_id = int(r["context_id"])
+        per_context[ctx_id]["returns"].append(float(r["return"]))
+        per_context[ctx_id]["lengths"].append(int(r["length"]))
+        if r.get("completion", None) is not None:
+            per_context[ctx_id]["completions"].append(float(r["completion"]))
+        if r.get("success", None) is True:
+            per_context[ctx_id]["successes"].append(1.0)
+        elif r.get("success", None) is False:
+            per_context[ctx_id]["successes"].append(0.0)
+        inertia = r.get("context_params", {}).get("mario_inertia", None)
+        if inertia is not None:
+            per_context[ctx_id]["inertias"].append(float(inertia))
+
+    per_context_out: Dict[int, Dict[str, Any]] = {}
+    for ctx_id, vals in per_context.items():
+        per_context_out[int(ctx_id)] = {
+            "mean_return": float(np.mean(vals["returns"])) if vals["returns"] else float("nan"),
+            "mean_completion": float(np.mean(vals["completions"])) if vals["completions"] else float("nan"),
+            "success_rate": float(np.mean(vals["successes"])) if vals["successes"] else float("nan"),
+            "mean_length": float(np.mean(vals["lengths"])) if vals["lengths"] else float("nan"),
+            "mean_inertia": float(np.mean(vals["inertias"])) if vals["inertias"] else float("nan"),
+            "n_episodes": int(len(vals["returns"])),
+        }
+    summary["per_context"] = per_context_out
+
+    # Uniform-per-context aggregates (each context weighted equally)
+    ctx_mean_returns = [v["mean_return"] for v in per_context_out.values() if not np.isnan(v["mean_return"])]
+    ctx_mean_completions = [v["mean_completion"] for v in per_context_out.values() if not np.isnan(v["mean_completion"])]
+    ctx_success_rates = [v["success_rate"] for v in per_context_out.values() if not np.isnan(v["success_rate"])]
+    summary["uniform_ctx_mean_return"] = float(np.mean(ctx_mean_returns)) if ctx_mean_returns else float("nan")
+    summary["uniform_ctx_mean_completion"] = float(np.mean(ctx_mean_completions)) if ctx_mean_completions else float("nan")
+    summary["uniform_ctx_success_rate"] = float(np.mean(ctx_success_rates)) if ctx_success_rates else float("nan")
+
+    # Per inertia summary (episode-weighted across all maps with that inertia)
+    inertia_stats: Dict[float, Dict[str, list[float]]] = defaultdict(lambda: {"returns": [], "completions": [], "successes": [], "lengths": []})
+    for r in episodes:
+        inertia = float(r["context_params"].get("mario_inertia", float("nan")))
+        inertia_stats[inertia]["returns"].append(float(r["return"]))
+        inertia_stats[inertia]["lengths"].append(int(r["length"]))
+        if r.get("completion", None) is not None:
+            inertia_stats[inertia]["completions"].append(float(r["completion"]))
+        if r.get("success", None) is True:
+            inertia_stats[inertia]["successes"].append(1.0)
+        elif r.get("success", None) is False:
+            inertia_stats[inertia]["successes"].append(0.0)
+
+    per_inertia: Dict[float, Dict[str, Any]] = {}
+    for inertia, vals in inertia_stats.items():
+        per_inertia[float(inertia)] = {
+            "mean_return": float(np.mean(vals["returns"])) if vals["returns"] else float("nan"),
+            "mean_completion": float(np.mean(vals["completions"])) if vals["completions"] else float("nan"),
+            "success_rate": float(np.mean(vals["successes"])) if vals["successes"] else float("nan"),
+            "mean_length": float(np.mean(vals["lengths"])) if vals["lengths"] else float("nan"),
+            "n_episodes": int(len(vals["returns"])),
+        }
+    summary["per_inertia"] = per_inertia
+
+    # Per training range summary (if train_range_index is available)
+    per_range_stats: Dict[int, Dict[str, list[float]]] = defaultdict(lambda: {"returns": [], "completions": [], "successes": [], "lengths": [], "inertias": []})
+    for r in episodes:
+        ctx_id = int(r["context_id"])
+        ridx = contexts.get(ctx_id, {}).get("train_range_index", None)
+        if ridx is None:
+            continue
+        ridx_i = int(ridx)
+        per_range_stats[ridx_i]["returns"].append(float(r["return"]))
+        per_range_stats[ridx_i]["lengths"].append(int(r["length"]))
+        if r.get("completion", None) is not None:
+            per_range_stats[ridx_i]["completions"].append(float(r["completion"]))
+        if r.get("success", None) is True:
+            per_range_stats[ridx_i]["successes"].append(1.0)
+        elif r.get("success", None) is False:
+            per_range_stats[ridx_i]["successes"].append(0.0)
+        inertia = r.get("context_params", {}).get("mario_inertia", None)
+        if inertia is not None:
+            per_range_stats[ridx_i]["inertias"].append(float(inertia))
+
+    per_range_out: Dict[int, Dict[str, Any]] = {}
+    for ridx, vals in per_range_stats.items():
+        per_range_out[int(ridx)] = {
+            "mean_return": float(np.mean(vals["returns"])) if vals["returns"] else float("nan"),
+            "mean_completion": float(np.mean(vals["completions"])) if vals["completions"] else float("nan"),
+            "success_rate": float(np.mean(vals["successes"])) if vals["successes"] else float("nan"),
+            "mean_length": float(np.mean(vals["lengths"])) if vals["lengths"] else float("nan"),
+            "mean_inertia": float(np.mean(vals["inertias"])) if vals["inertias"] else float("nan"),
+            "n_episodes": int(len(vals["returns"])),
+        }
+    summary["per_range"] = per_range_out
 
     return summary
 
@@ -1351,7 +1760,19 @@ def train(config: TrainingConfig):
     log("SETTING UP TRAINING")
     log("=" * 50)
 
-    model, train_env, eval_env, callbacks, train_contexts, test_contexts, run_dir, train_printer = setup_training(config)
+    (
+        model,
+        train_env,
+        eval_env,
+        train_eval_env,
+        callbacks,
+        train_contexts,
+        train_eval_contexts,
+        test_contexts,
+        run_dir,
+        train_printer,
+        train_inertia_values,
+    ) = setup_training(config)
 
     log("Training Configuration:")
     log(f"  Train contexts: {config.n_train_maps}")
@@ -1379,6 +1800,11 @@ def train(config: TrainingConfig):
 
     training_curve = getattr(train_printer, "history", [])
     episode_history = getattr(train_printer, "episode_history", [])
+    training_episode_summary = summarize_training_episodes(
+        episode_history=episode_history,
+        contexts=train_contexts,
+        tag="training_rollout",
+    )
     try:
         curve_path = run_dir / "training_curve.json"
         with curve_path.open("w") as f:
@@ -1406,11 +1832,43 @@ def train(config: TrainingConfig):
         deterministic=False,
         tag="stochastic",
     )
+
+    final_train_stoch = None
+    if config.final_eval_on_train_contexts:
+        log("=" * 50)
+        log("FINAL EVALUATION (TRAIN CONTEXTS)")
+        log("=" * 50)
+        final_train_stoch = evaluate_final(
+            model,
+            train_eval_env,
+            train_eval_contexts,
+            n_episodes=int(config.train_final_eval_n_episodes),
+            deterministic=False,
+            tag="train_stochastic",
+            inertia_ranges=config.train_inertia_ranges,
+            summarize_inertia_by_ranges=True,
+        )
+
     final_results = {
         "stochastic": final_stoch,
+        "train_stochastic": final_train_stoch,
+        "training_rollout": training_episode_summary,
         "training_curve": training_curve,
         "episode_history": episode_history,
     }
+    if train_inertia_values is not None:
+        final_results["train_inertia_values"] = train_inertia_values
+    if config.resample_train_inertia_each_episode and config.final_eval_on_train_contexts:
+        final_results["train_final_eval_n_inertias"] = int(config.train_final_eval_n_inertias)
+        final_results["train_final_eval_n_episodes"] = int(config.train_final_eval_n_episodes)
+
+    try:
+        out_path = run_dir / "final_results.json"
+        with out_path.open("w") as f:
+            json.dump(final_results, f, indent=2)
+        log(f"Saved final results to {out_path}")
+    except Exception as e:
+        log(f"Could not save final results JSON: {e}")
 
     if config.save_final_model:
         model_path = run_dir / "final_model.zip"
@@ -1423,7 +1881,11 @@ def train(config: TrainingConfig):
         log(f"Model saved to {model_path}")
 
     # --- make closing non-fatal ---
-    for env, name in ((train_env, "train_env"), (eval_env, "eval_env")):
+    for env, name in (
+        (train_env, "train_env"),
+        (eval_env, "eval_env"),
+        (train_eval_env, "train_eval_env"),
+    ):
         try:
             env.close()
         except XStartError as e:
