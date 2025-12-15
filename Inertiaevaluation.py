@@ -183,8 +183,6 @@ class TrainingConfig:
     # Experiment switches
     # If True, the observation will include a "ctx" vector with (normalized) mario_inertia
     use_context: bool = True
-<<<<<<< HEAD
-=======
     # Which CARL context keys to include in the "ctx" vector (order matters).
     # Common choices: ("mario_inertia",) or ("level_index", "mario_state", "mario_inertia")
     context_keys: Tuple[str, ...] = ("mario_inertia",)
@@ -196,7 +194,6 @@ class TrainingConfig:
     extractor_features_dim: int = 256
     context_hidden_dim: int = 256
     hadamard_gate_activation: str = "relu"  # "relu" or "sigmoid"
->>>>>>> b1cf95e (final maybe)
 
     # If True: test on the SAME maps as training (same noise_seed etc.), only inertia changes.
     # If False: test on NEW maps (different noise_seed) as in the original version.

@@ -86,25 +86,6 @@ def get_config() -> TrainingConfig:
     
     if QUICK_TEST:
         # Quick test settings - minimal resources for code verification
-<<<<<<< HEAD
-        cfg.total_timesteps = 5_000
-        cfg.n_eval_episodes = 1
-        cfg.n_train_maps = 2
-        cfg.n_test_maps = 2
-        cfg.eval_freq = 7_500
-        cfg.print_freq = 1_000
-        cfg.checkpoint_freq = 5_000
-        cfg.n_envs = 4
-    else:
-        # Full experiment settings - proper evaluation
-        cfg.total_timesteps = 40_000
-        cfg.n_eval_episodes = 5
-        cfg.n_train_maps = 5
-        cfg.n_test_maps = 5
-        cfg.eval_freq = 50_000
-        cfg.print_freq = 5_000
-        cfg.checkpoint_freq = 30_000
-=======
         cfg.total_timesteps = 50_000
         cfg.n_eval_episodes = 5
         cfg.n_train_maps = 5
@@ -122,7 +103,6 @@ def get_config() -> TrainingConfig:
         cfg.eval_freq = 320_000
         cfg.print_freq = 20_000
         cfg.checkpoint_freq = 110_000
->>>>>>> b1cf95e (final maybe)
         cfg.n_envs = 8
     
     return cfg
