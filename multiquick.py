@@ -22,7 +22,7 @@ from Inertiaevaluation import TrainingConfig, train
 # ============================================================================
 # Set to True for quick testing (verify code works)
 # Set to False for full experiment (proper evaluation)
-QUICK_TEST = True
+QUICK_TEST = False
 
 # Smoothing for episode-level reward curve (higher = smoother)
 EPISODE_RETURN_SMOOTH_WINDOW = 50
@@ -140,23 +140,23 @@ def get_config(quick_test: bool | None = None) -> TrainingConfig:
     
     if quick_test:
         # Quick test settings - minimal resources for code verification
-        cfg.total_timesteps = 500_000
+        cfg.total_timesteps = 50_000
         cfg.n_eval_episodes = 5
         cfg.n_train_maps = 5
         cfg.n_test_maps = 5
         cfg.eval_freq = 700_000  
-        cfg.print_freq = 100_000
+        cfg.print_freq = 10_000
         cfg.checkpoint_freq = 800_000
         cfg.n_envs = 8
     else:
         # Full experiment settings - proper evaluation
-        cfg.total_timesteps = 100_000
+        cfg.total_timesteps = 200_000
         cfg.n_eval_episodes = 5
         cfg.n_train_maps = 5
         cfg.n_test_maps = 5
-        cfg.eval_freq = 120_000
-        cfg.print_freq = 10_000
-        cfg.checkpoint_freq = 60_000
+        cfg.eval_freq = 320_000
+        cfg.print_freq = 20_000
+        cfg.checkpoint_freq = 110_000
         cfg.n_envs = 8
     return cfg
 
@@ -689,6 +689,34 @@ if __name__ == "__main__":
     parser.add_argument("--base-log-dir", type=str, default=None, help="Override log base (defaults to quick/full).")
     parser.add_argument("--quick", action="store_true", help="Override QUICK_TEST=True for this run.")
     parser.add_argument("--full", action="store_true", help="Override QUICK_TEST=False for this run.")
+    parser.add_argument(
+        "--use-context",
+        dest="use_context",
+        action="store_const",
+        const=True,
+        default=None,
+        help="Include mario_inertia as a context input (adds ctx vector to observations).",
+    )
+    parser.add_argument(
+        "--no-context",
+        dest="use_context",
+        action="store_const",
+        const=False,
+        default=None,
+        help="Disable context input (vision only).",
+    )
+    fusion_group = parser.add_mutually_exclusive_group()
+    fusion_group.add_argument(
+        "--fusion",
+        choices=["concat", "hadamard"],
+        default=None,
+        help='Feature fusion method: "concat" (default) or "hadamard" (cGate).',
+    )
+    fusion_group.add_argument(
+        "--hadamard",
+        action="store_true",
+        help="Shortcut for --fusion hadamard (forces inertia context on).",
+    )
     args = parser.parse_args()
 
     if args.quick and args.full:
@@ -698,6 +726,21 @@ if __name__ == "__main__":
         QUICK_TEST = bool(args.quick)
 
     cfg = get_config()
+    # Apply CLI overrides for context/fusion.
+    requested_fusion = "hadamard" if bool(args.hadamard) else args.fusion
+    if requested_fusion is not None:
+        cfg.feature_fusion = str(requested_fusion)
+
+    if args.use_context is not None:
+        cfg.use_context = bool(args.use_context)
+
+    # This runner is intended for inertia-only context.
+    cfg.context_keys = ("mario_inertia",)
+
+    if str(cfg.feature_fusion).lower().strip() == "hadamard":
+        if args.use_context is False:
+            raise SystemExit("--hadamard/--fusion hadamard requires --use-context (or omit --no-context).")
+        cfg.use_context = True
     seeds = (
         [int(s.strip()) for s in args.seeds.split(",") if s.strip() != ""]
         if args.seeds is not None
@@ -729,6 +772,8 @@ if __name__ == "__main__":
     print(f"  Print frequency:    {cfg.print_freq:,}")
     print(f"  Checkpoint freq:    {cfg.checkpoint_freq:,}")
     print(f"  Parallel envs:      {cfg.n_envs}")
+    print(f"  Use context:        {cfg.use_context} (keys={list(cfg.context_keys) if cfg.use_context else []})")
+    print(f"  Feature fusion:     {cfg.feature_fusion}")
     print(f"  Log directory:      {log_dir}")
     print("=" * 60)
     
