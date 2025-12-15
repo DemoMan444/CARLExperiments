@@ -1,0 +1,72 @@
+[
+  {
+    "timesteps": 20000,
+    "mean_return": 4.0,
+    "mean_completion": 0.39718344143400003,
+    "uniform_ctx_mean_return": 3.999849594849595,
+    "uniform_ctx_mean_completion": 0.38356835847526366
+  },
+  {
+    "timesteps": 40000,
+    "mean_return": 6.18,
+    "mean_completion": 0.480814246374,
+    "uniform_ctx_mean_return": 5.091883051092777,
+    "uniform_ctx_mean_completion": 0.4360604032272164
+  },
+  {
+    "timesteps": 60000,
+    "mean_return": 4.86,
+    "mean_completion": 0.40917050943999994,
+    "uniform_ctx_mean_return": 5.952,
+    "uniform_ctx_mean_completion": 0.48527155663919996
+  },
+  {
+    "timesteps": 80000,
+    "mean_return": 8.32,
+    "mean_completion": 0.55220325431,
+    "uniform_ctx_mean_return": 6.903999999999999,
+    "uniform_ctx_mean_completion": 0.5244672972624
+  },
+  {
+    "timesteps": 100000,
+    "mean_return": 6.76,
+    "mean_completion": 0.5078269209999999,
+    "uniform_ctx_mean_return": 7.438,
+    "uniform_ctx_mean_completion": 0.5530605019382
+  },
+  {
+    "timesteps": 120000,
+    "mean_return": 8.12,
+    "mean_completion": 0.5443736861,
+    "uniform_ctx_mean_return": 7.4079999999999995,
+    "uniform_ctx_mean_completion": 0.54481749896
+  },
+  {
+    "timesteps": 140000,
+    "mean_return": 8.62,
+    "mean_completion": 0.63691923469,
+    "uniform_ctx_mean_return": 8.564,
+    "uniform_ctx_mean_completion": 0.5895746159420001
+  },
+  {
+    "timesteps": 160000,
+    "mean_return": 7.66,
+    "mean_completion": 0.599912759766,
+    "uniform_ctx_mean_return": 8.078,
+    "uniform_ctx_mean_completion": 0.5963625422362
+  },
+  {
+    "timesteps": 180000,
+    "mean_return": 7.96,
+    "mean_completion": 0.6035985575599999,
+    "uniform_ctx_mean_return": 7.925999999999999,
+    "uniform_ctx_mean_completion": 0.5919399536906
+  },
+  {
+    "timesteps": 200000,
+    "mean_return": 7.54,
+    "mean_completion": 0.5757164608800001,
+    "uniform_ctx_mean_return": 8.296000000000001,
+    "uniform_ctx_mean_completion": 0.6015916757580001
+  }
+]

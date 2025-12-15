@@ -1,0 +1,72 @@
+[
+  {
+    "timesteps": 10000,
+    "mean_return": 2.72,
+    "mean_completion": 0.28988408393799997,
+    "uniform_ctx_mean_return": 2.311726285410496,
+    "uniform_ctx_mean_completion": 0.2517288999375185
+  },
+  {
+    "timesteps": 20000,
+    "mean_return": 4.44,
+    "mean_completion": 0.40906266193999996,
+    "uniform_ctx_mean_return": 2.9926778173042403,
+    "uniform_ctx_mean_completion": 0.3079336797482498
+  },
+  {
+    "timesteps": 30000,
+    "mean_return": 5.18,
+    "mean_completion": 0.430410140276,
+    "uniform_ctx_mean_return": 4.154,
+    "uniform_ctx_mean_completion": 0.37594459256939994
+  },
+  {
+    "timesteps": 40000,
+    "mean_return": 6.22,
+    "mean_completion": 0.49423739264,
+    "uniform_ctx_mean_return": 5.335999999999999,
+    "uniform_ctx_mean_completion": 0.4496041818756
+  },
+  {
+    "timesteps": 50000,
+    "mean_return": 6.52,
+    "mean_completion": 0.5166063768320001,
+    "uniform_ctx_mean_return": 5.912000000000001,
+    "uniform_ctx_mean_completion": 0.49439260905080007
+  },
+  {
+    "timesteps": 60000,
+    "mean_return": 8.02,
+    "mean_completion": 0.594588648,
+    "uniform_ctx_mean_return": 6.252000000000001,
+    "uniform_ctx_mean_completion": 0.5260960475294
+  },
+  {
+    "timesteps": 70000,
+    "mean_return": 6.48,
+    "mean_completion": 0.5565567516800001,
+    "uniform_ctx_mean_return": 6.480000000000001,
+    "uniform_ctx_mean_completion": 0.5450099738211999
+  },
+  {
+    "timesteps": 80000,
+    "mean_return": 6.46,
+    "mean_completion": 0.55121728186,
+    "uniform_ctx_mean_return": 6.593999999999999,
+    "uniform_ctx_mean_completion": 0.54309587121
+  },
+  {
+    "timesteps": 90000,
+    "mean_return": 7.94,
+    "mean_completion": 0.5599947272200001,
+    "uniform_ctx_mean_return": 6.7,
+    "uniform_ctx_mean_completion": 0.5448905313780001
+  },
+  {
+    "timesteps": 100000,
+    "mean_return": 7.3,
+    "mean_completion": 0.569459183456,
+    "uniform_ctx_mean_return": 6.786,
+    "uniform_ctx_mean_completion": 0.5401796226716
+  }
+]

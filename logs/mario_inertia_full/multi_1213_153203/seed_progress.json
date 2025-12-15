@@ -1,0 +1,31 @@
+{
+  "requested_seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+  ],
+  "completed_seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+  ],
+  "missing_seeds": [],
+  "seed_run_dirs": {
+    "0": "logs/mario_inertia_full/multi_1213_153203/seed_0/inertia_1213_153203",
+    "1": "logs/mario_inertia_full/multi_1213_153203/seed_1/inertia_1213_155458",
+    "2": "logs/mario_inertia_full/multi_1213_153203/seed_2/inertia_1213_161107",
+    "3": "logs/mario_inertia_full/multi_1213_153203/seed_3/inertia_1213_162621",
+    "4": "logs/mario_inertia_full/multi_1213_153203/seed_4/inertia_1213_163824",
+    "5": "logs/mario_inertia_full/multi_1213_153203/seed_5/inertia_1213_165058",
+    "6": "logs/mario_inertia_full/multi_1213_153203/seed_6/inertia_1213_170605"
+  },
+  "updated_at": "2025-12-13 17:21:19"
+}

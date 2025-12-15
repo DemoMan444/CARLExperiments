@@ -1,0 +1,72 @@
+[
+  {
+    "timesteps": 20000,
+    "mean_return": 2.9,
+    "mean_completion": 0.35123825890000004,
+    "uniform_ctx_mean_return": 3.37,
+    "uniform_ctx_mean_completion": 0.3455197675322
+  },
+  {
+    "timesteps": 40000,
+    "mean_return": 5.4,
+    "mean_completion": 0.43361356084,
+    "uniform_ctx_mean_return": 4.993999999999999,
+    "uniform_ctx_mean_completion": 0.43736457578800003
+  },
+  {
+    "timesteps": 60000,
+    "mean_return": 5.62,
+    "mean_completion": 0.4639123088,
+    "uniform_ctx_mean_return": 5.017999999999999,
+    "uniform_ctx_mean_completion": 0.43754421710599994
+  },
+  {
+    "timesteps": 80000,
+    "mean_return": 5.2,
+    "mean_completion": 0.43604509371999994,
+    "uniform_ctx_mean_return": 5.442,
+    "uniform_ctx_mean_completion": 0.46310911942200006
+  },
+  {
+    "timesteps": 100000,
+    "mean_return": 6.2,
+    "mean_completion": 0.48173899356,
+    "uniform_ctx_mean_return": 5.284000000000001,
+    "uniform_ctx_mean_completion": 0.4572030813674
+  },
+  {
+    "timesteps": 120000,
+    "mean_return": 4.62,
+    "mean_completion": 0.40856743972,
+    "uniform_ctx_mean_return": 5.5280000000000005,
+    "uniform_ctx_mean_completion": 0.45252897785499996
+  },
+  {
+    "timesteps": 140000,
+    "mean_return": 4.52,
+    "mean_completion": 0.46104503894000004,
+    "uniform_ctx_mean_return": 5.6899999999999995,
+    "uniform_ctx_mean_completion": 0.4812811363359999
+  },
+  {
+    "timesteps": 160000,
+    "mean_return": 5.74,
+    "mean_completion": 0.46283832688,
+    "uniform_ctx_mean_return": 6.232,
+    "uniform_ctx_mean_completion": 0.5023711586440001
+  },
+  {
+    "timesteps": 180000,
+    "mean_return": 6.36,
+    "mean_completion": 0.4984255251300001,
+    "uniform_ctx_mean_return": 5.9959999999999996,
+    "uniform_ctx_mean_completion": 0.494677493441
+  },
+  {
+    "timesteps": 200000,
+    "mean_return": 7.08,
+    "mean_completion": 0.5495176828200001,
+    "uniform_ctx_mean_return": 5.878000000000001,
+    "uniform_ctx_mean_completion": 0.48257421874140005
+  }
+]

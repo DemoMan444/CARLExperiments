@@ -86,6 +86,7 @@ def get_config() -> TrainingConfig:
     
     if QUICK_TEST:
         # Quick test settings - minimal resources for code verification
+<<<<<<< HEAD
         cfg.total_timesteps = 5_000
         cfg.n_eval_episodes = 1
         cfg.n_train_maps = 2
@@ -103,6 +104,25 @@ def get_config() -> TrainingConfig:
         cfg.eval_freq = 50_000
         cfg.print_freq = 5_000
         cfg.checkpoint_freq = 30_000
+=======
+        cfg.total_timesteps = 50_000
+        cfg.n_eval_episodes = 5
+        cfg.n_train_maps = 5
+        cfg.n_test_maps = 5
+        cfg.eval_freq = 700_000  
+        cfg.print_freq = 10_000
+        cfg.checkpoint_freq = 800_000
+        cfg.n_envs = 8
+    else:
+        # Full experiment settings - proper evaluation
+        cfg.total_timesteps = 200_000
+        cfg.n_eval_episodes = 5
+        cfg.n_train_maps = 5
+        cfg.n_test_maps = 5
+        cfg.eval_freq = 320_000
+        cfg.print_freq = 20_000
+        cfg.checkpoint_freq = 110_000
+>>>>>>> b1cf95e (final maybe)
         cfg.n_envs = 8
     
     return cfg
@@ -559,10 +579,94 @@ def plot_multi_seed_training_and_eval(
 # ============================================================================
 
 if __name__ == "__main__":
+<<<<<<< HEAD
     # Get configuration based on QUICK_TEST toggle
     cfg = get_config()
     seeds = get_seeds()
     log_dir = get_log_dir()
+=======
+    parser = argparse.ArgumentParser(
+        description="Run multi-seed Mario inertia experiments with optional resume/skip.",
+    )
+    parser.add_argument("--resume", type=str, default=None, help="Existing run dir to resume, or 'latest'.")
+    parser.add_argument("--skip-completed", dest="skip_completed", action="store_true", default=True)
+    parser.add_argument("--no-skip-completed", dest="skip_completed", action="store_false")
+    parser.add_argument("--plots", dest="make_plots", action="store_true", default=True)
+    parser.add_argument("--no-plots", dest="make_plots", action="store_false")
+    parser.add_argument("--plot-partial", action="store_true", default=False)
+    parser.add_argument("--seeds", type=str, default=None, help="Comma-separated seeds, e.g. 0,1,2,3")
+    parser.add_argument("--base-log-dir", type=str, default=None, help="Override log base (defaults to quick/full).")
+    parser.add_argument("--quick", action="store_true", help="Override QUICK_TEST=True for this run.")
+    parser.add_argument("--full", action="store_true", help="Override QUICK_TEST=False for this run.")
+    parser.add_argument(
+        "--use-context",
+        dest="use_context",
+        action="store_const",
+        const=True,
+        default=None,
+        help="Include mario_inertia as a context input (adds ctx vector to observations).",
+    )
+    parser.add_argument(
+        "--no-context",
+        dest="use_context",
+        action="store_const",
+        const=False,
+        default=None,
+        help="Disable context input (vision only).",
+    )
+    fusion_group = parser.add_mutually_exclusive_group()
+    fusion_group.add_argument(
+        "--fusion",
+        choices=["concat", "hadamard"],
+        default=None,
+        help='Feature fusion method: "concat" (default) or "hadamard" (cGate).',
+    )
+    fusion_group.add_argument(
+        "--hadamard",
+        action="store_true",
+        help="Shortcut for --fusion hadamard (forces inertia context on).",
+    )
+    args = parser.parse_args()
+
+    if args.quick and args.full:
+        raise SystemExit("Choose only one: --quick or --full")
+
+    if args.quick or args.full:
+        QUICK_TEST = bool(args.quick)
+
+    cfg = get_config()
+    # Apply CLI overrides for context/fusion.
+    requested_fusion = "hadamard" if bool(args.hadamard) else args.fusion
+    if requested_fusion is not None:
+        cfg.feature_fusion = str(requested_fusion)
+
+    if args.use_context is not None:
+        cfg.use_context = bool(args.use_context)
+
+    # This runner is intended for inertia-only context.
+    cfg.context_keys = ("mario_inertia",)
+
+    if str(cfg.feature_fusion).lower().strip() == "hadamard":
+        if args.use_context is False:
+            raise SystemExit("--hadamard/--fusion hadamard requires --use-context (or omit --no-context).")
+        cfg.use_context = True
+    seeds = (
+        [int(s.strip()) for s in args.seeds.split(",") if s.strip() != ""]
+        if args.seeds is not None
+        else get_seeds()
+    )
+    log_dir = args.base_log_dir or get_log_dir()
+
+    resume_dir: str | None = None
+    if args.resume is not None:
+        if args.resume.lower() == "latest":
+            latest = find_latest_multi_run(Path(log_dir))
+            if latest is None:
+                raise SystemExit(f"No existing multi_* runs found under: {log_dir}")
+            resume_dir = str(latest)
+        else:
+            resume_dir = args.resume
+>>>>>>> b1cf95e (final maybe)
     
     # Print mode info
     mode = "QUICK TEST" if QUICK_TEST else "FULL EXPERIMENT"
@@ -578,6 +682,8 @@ if __name__ == "__main__":
     print(f"  Print frequency:    {cfg.print_freq:,}")
     print(f"  Checkpoint freq:    {cfg.checkpoint_freq:,}")
     print(f"  Parallel envs:      {cfg.n_envs}")
+    print(f"  Use context:        {cfg.use_context} (keys={list(cfg.context_keys) if cfg.use_context else []})")
+    print(f"  Feature fusion:     {cfg.feature_fusion}")
     print(f"  Log directory:      {log_dir}")
     print("=" * 60)
     

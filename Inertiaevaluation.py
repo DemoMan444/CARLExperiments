@@ -16,6 +16,7 @@ import math
 from pyvirtualdisplay.abstractdisplay import XStartError  # add at top of file
 
 import torch
+import torch.nn as nn
 
 # Reduce noisy import-time output in subprocess workers (SubprocVecEnv).
 os.environ.setdefault("PYGAME_HIDE_SUPPORT_PROMPT", "1")
@@ -48,6 +49,7 @@ def _suppress_output():
 with _suppress_output():
     from stable_baselines3 import PPO
     from stable_baselines3.common.callbacks import BaseCallback
+    from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
     from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, VecNormalize
     from stable_baselines3.common.monitor import Monitor
 
@@ -181,6 +183,20 @@ class TrainingConfig:
     # Experiment switches
     # If True, the observation will include a "ctx" vector with (normalized) mario_inertia
     use_context: bool = True
+<<<<<<< HEAD
+=======
+    # Which CARL context keys to include in the "ctx" vector (order matters).
+    # Common choices: ("mario_inertia",) or ("level_index", "mario_state", "mario_inertia")
+    context_keys: Tuple[str, ...] = ("mario_inertia",)
+
+    # How to fuse vision + context in the policy:
+    # - "concat": SB3 CombinedExtractor (default behavior)
+    # - "hadamard": cGate/Hadamard (element-wise) fusion in a custom extractor
+    feature_fusion: str = "hadamard"  # "concat" or "hadamard"
+    extractor_features_dim: int = 256
+    context_hidden_dim: int = 256
+    hadamard_gate_activation: str = "relu"  # "relu" or "sigmoid"
+>>>>>>> b1cf95e (final maybe)
 
     # If True: test on the SAME maps as training (same noise_seed etc.), only inertia changes.
     # If False: test on NEW maps (different noise_seed) as in the original version.
@@ -509,6 +525,92 @@ class ActionRepeat(gym.Wrapper):
         else:
             obs = last_obs
         return obs, total_r, terminated, truncated, info
+
+
+# ---------------------------
+# cGate / Hadamard Fusion Extractor
+# ---------------------------
+class HadamardGateExtractor(BaseFeaturesExtractor):
+    """
+    Multi-input extractor that fuses vision ("img") and context ("ctx") using a
+    Hadamard (element-wise) product.
+    """
+
+    def __init__(
+        self,
+        observation_space: spaces.Dict,
+        features_dim: int = 256,
+        context_hidden_dim: int = 256,
+        gate_activation: str = "relu",
+    ):
+        super().__init__(observation_space, features_dim)
+
+        if not isinstance(observation_space, spaces.Dict):
+            raise TypeError("HadamardGateExtractor expects a Dict observation space.")
+        if "img" not in observation_space.spaces or "ctx" not in observation_space.spaces:
+            raise KeyError('HadamardGateExtractor requires observation keys "img" and "ctx".')
+
+        img_space = observation_space.spaces["img"]
+        ctx_space = observation_space.spaces["ctx"]
+
+        if not isinstance(img_space, spaces.Box) or img_space.shape is None or len(img_space.shape) != 3:
+            raise TypeError('Observation space "img" must be a Box(C,H,W).')
+        if not isinstance(ctx_space, spaces.Box) or ctx_space.shape is None or len(ctx_space.shape) != 1:
+            raise TypeError('Observation space "ctx" must be a 1D Box.')
+
+        in_channels, height, width = img_space.shape
+        ctx_dim = int(ctx_space.shape[0])
+
+        self.cnn = nn.Sequential(
+            nn.Conv2d(in_channels, 32, kernel_size=8, stride=4),
+            nn.ReLU(),
+            nn.Conv2d(32, 64, kernel_size=4, stride=2),
+            nn.ReLU(),
+            nn.Conv2d(64, 64, kernel_size=3, stride=1),
+            nn.ReLU(),
+            nn.Flatten(),
+        )
+
+        with torch.no_grad():
+            dummy = torch.zeros(1, in_channels, height, width)
+            n_flat = int(self.cnn(dummy).shape[1])
+
+        self.context_proj = nn.Sequential(
+            nn.LayerNorm(ctx_dim),
+            nn.Linear(ctx_dim, int(context_hidden_dim)),
+            nn.ReLU(),
+            nn.Linear(int(context_hidden_dim), n_flat),
+        )
+
+        gate_activation = str(gate_activation).lower().strip()
+        if gate_activation == "relu":
+            self.gate_activation: nn.Module = nn.ReLU()
+        elif gate_activation == "sigmoid":
+            self.gate_activation = nn.Sigmoid()
+        else:
+            raise ValueError('gate_activation must be "relu" or "sigmoid".')
+
+        self.final_layer = nn.Sequential(
+            nn.Linear(n_flat, int(features_dim)),
+            nn.ReLU(),
+        )
+
+        self._features_dim = int(features_dim)
+
+    def forward(self, observations: Dict[str, torch.Tensor]) -> torch.Tensor:
+        img = observations["img"]
+        ctx = observations["ctx"]
+
+        if img.dtype == torch.uint8:
+            img = img.float() / 255.0
+        else:
+            img = img.float()
+        ctx = ctx.float()
+
+        frame_feat = self.cnn(img)
+        ctx_feat = self.gate_activation(self.context_proj(ctx))
+        fused = frame_feat * ctx_feat
+        return self.final_layer(fused)
 
 
 # ---------------------------
@@ -1097,7 +1199,12 @@ def setup_training(config: TrainingConfig):
     config.n_test_maps = len(test_contexts)
 
     # Decide which context keys to include in the observation
-    ctx_keys: List[str] = ["mario_inertia"] if config.use_context else []
+    ctx_keys: List[str] = list(config.context_keys) if config.use_context else []
+    if ctx_keys:
+        available = set(CARLMarioEnv.get_context_features().keys())
+        unknown = [k for k in ctx_keys if k not in available]
+        if unknown:
+            raise ValueError(f"Unknown context_keys in config: {unknown}. Available: {sorted(available)}")
     log(f"Using context keys in observations: {ctx_keys if ctx_keys else 'NONE (vision only)'}")
 
     log("Training contexts (all):")
@@ -1129,19 +1236,39 @@ def setup_training(config: TrainingConfig):
     # ---------------------------------------------------------
     # 4. Model Setup
     # ---------------------------------------------------------
-    try:
-        from stable_baselines3.common.torch_layers import CombinedExtractor
-    except ImportError:
-        from stable_baselines3.common.torch_layers import MultiInputExtractor as CombinedExtractor
+    fusion = str(config.feature_fusion).lower().strip()
+    if fusion not in ("concat", "hadamard"):
+        raise ValueError('config.feature_fusion must be "concat" or "hadamard".')
 
-    policy_kwargs = dict(
-        features_extractor_class=CombinedExtractor,
-        features_extractor_kwargs=dict(cnn_output_dim=256),
-        net_arch=dict(pi=[256], vf=[256]),
-        activation_fn=torch.nn.ReLU,
-        ortho_init=False,
-        normalize_images=True,
-    )
+    if fusion == "hadamard":
+        if not ctx_keys:
+            raise ValueError('Hadamard fusion requires config.use_context=True and non-empty config.context_keys.')
+        policy_kwargs = dict(
+            features_extractor_class=HadamardGateExtractor,
+            features_extractor_kwargs=dict(
+                features_dim=int(config.extractor_features_dim),
+                context_hidden_dim=int(config.context_hidden_dim),
+                gate_activation=str(config.hadamard_gate_activation),
+            ),
+            net_arch=dict(pi=[256], vf=[256]),
+            activation_fn=nn.ReLU,
+            ortho_init=False,
+            normalize_images=True,
+        )
+    else:
+        try:
+            from stable_baselines3.common.torch_layers import CombinedExtractor
+        except ImportError:
+            from stable_baselines3.common.torch_layers import MultiInputExtractor as CombinedExtractor
+
+        policy_kwargs = dict(
+            features_extractor_class=CombinedExtractor,
+            features_extractor_kwargs=dict(cnn_output_dim=int(config.extractor_features_dim)),
+            net_arch=dict(pi=[256], vf=[256]),
+            activation_fn=nn.ReLU,
+            ortho_init=False,
+            normalize_images=True,
+        )
 
     log("Creating PPO model...")
     model = PPO(
@@ -1362,6 +1489,9 @@ def train(config: TrainingConfig):
     log(f"  Total timesteps: {config.total_timesteps:,}")
     log(f"  Device: {config.device}")
     log(f"  Use context in obs: {config.use_context}")
+    if config.use_context:
+        log(f"  Context keys: {list(config.context_keys)}")
+        log(f"  Feature fusion: {config.feature_fusion}")
     log(f"  Test on train maps: {config.test_on_train_maps}")
     log(f"  Run Directory: {run_dir}")
 
@@ -1447,6 +1577,7 @@ def main():
     config = TrainingConfig()
     # You can toggle these manually if you want:
     # config.use_context = True          # to feed mario_inertia as input
+    # config.feature_fusion = "hadamard"  # cGate/Hadamard fusion (requires use_context=True)
     # config.test_on_train_maps = True   # to test only physics shift on same maps
 
     print("FAST ITERATION MODE")  # using print here because log isn't setup yet

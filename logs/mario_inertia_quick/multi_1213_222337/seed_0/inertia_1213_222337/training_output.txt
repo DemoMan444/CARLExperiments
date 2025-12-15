@@ -1,0 +1,63 @@
+[2025-12-13 22:23:37] Initialized run directory: logs/mario_inertia_quick/multi_1213_222337/seed_0/inertia_1213_222337
+[2025-12-13 22:23:37] Generating training contexts (varying only mario_inertia)...
+[2025-12-13 22:23:37] Training inertia resampling enabled: 2 ranges x 100 values (rotating pool)
+[2025-12-13 22:23:37] Generating TEST contexts on NEW MAPS (different maps, varying mario_inertia)...
+[2025-12-13 22:23:37] Using context keys in observations: ['mario_inertia']
+[2025-12-13 22:23:37] Training contexts (all):
+[2025-12-13 22:23:37]   id=0: {'level_width': 100, 'level_index': 0, 'noise_seed': 1, 'mario_state': 0, 'mario_inertia': 0.8500000000000001, 'train_range_index': 0}
+[2025-12-13 22:23:37]   id=1: {'level_width': 100, 'level_index': 0, 'noise_seed': 1, 'mario_state': 0, 'mario_inertia': 1.15, 'train_range_index': 1}
+[2025-12-13 22:23:37]   id=2: {'level_width': 100, 'level_index': 0, 'noise_seed': 2, 'mario_state': 0, 'mario_inertia': 0.8500000000000001, 'train_range_index': 0}
+[2025-12-13 22:23:37]   id=3: {'level_width': 100, 'level_index': 0, 'noise_seed': 2, 'mario_state': 0, 'mario_inertia': 1.15, 'train_range_index': 1}
+[2025-12-13 22:23:37]   id=4: {'level_width': 100, 'level_index': 0, 'noise_seed': 3, 'mario_state': 0, 'mario_inertia': 0.8500000000000001, 'train_range_index': 0}
+[2025-12-13 22:23:37]   id=5: {'level_width': 100, 'level_index': 0, 'noise_seed': 3, 'mario_state': 0, 'mario_inertia': 1.15, 'train_range_index': 1}
+[2025-12-13 22:23:37]   id=6: {'level_width': 100, 'level_index': 0, 'noise_seed': 4, 'mario_state': 0, 'mario_inertia': 0.8500000000000001, 'train_range_index': 0}
+[2025-12-13 22:23:37]   id=7: {'level_width': 100, 'level_index': 0, 'noise_seed': 4, 'mario_state': 0, 'mario_inertia': 1.15, 'train_range_index': 1}
+[2025-12-13 22:23:37]   id=8: {'level_width': 100, 'level_index': 0, 'noise_seed': 5, 'mario_state': 0, 'mario_inertia': 0.8500000000000001, 'train_range_index': 0}
+[2025-12-13 22:23:37]   id=9: {'level_width': 100, 'level_index': 0, 'noise_seed': 5, 'mario_state': 0, 'mario_inertia': 1.15, 'train_range_index': 1}
+[2025-12-13 22:23:37] Test contexts (all):
+[2025-12-13 22:23:37]   id=0: {'level_width': 100, 'level_index': 0, 'noise_seed': 10001, 'mario_state': 0, 'mario_inertia': 0.6, 'gen_type': 'extra'} --> gen_type=extra, inertia=0.600
+[2025-12-13 22:23:37]   id=1: {'level_width': 100, 'level_index': 0, 'noise_seed': 10001, 'mario_state': 0, 'mario_inertia': 0.85, 'gen_type': 'id'} --> gen_type=id, inertia=0.850
+[2025-12-13 22:23:37]   id=2: {'level_width': 100, 'level_index': 0, 'noise_seed': 10001, 'mario_state': 0, 'mario_inertia': 1.0, 'gen_type': 'interp'} --> gen_type=interp, inertia=1.000
+[2025-12-13 22:23:37]   id=3: {'level_width': 100, 'level_index': 0, 'noise_seed': 10001, 'mario_state': 0, 'mario_inertia': 1.15, 'gen_type': 'id'} --> gen_type=id, inertia=1.150
+[2025-12-13 22:23:37]   id=4: {'level_width': 100, 'level_index': 0, 'noise_seed': 10001, 'mario_state': 0, 'mario_inertia': 1.4, 'gen_type': 'extra'} --> gen_type=extra, inertia=1.400
+[2025-12-13 22:23:37]   id=5: {'level_width': 100, 'level_index': 0, 'noise_seed': 10002, 'mario_state': 0, 'mario_inertia': 0.6, 'gen_type': 'extra'} --> gen_type=extra, inertia=0.600
+[2025-12-13 22:23:37]   id=6: {'level_width': 100, 'level_index': 0, 'noise_seed': 10002, 'mario_state': 0, 'mario_inertia': 0.85, 'gen_type': 'id'} --> gen_type=id, inertia=0.850
+[2025-12-13 22:23:37]   id=7: {'level_width': 100, 'level_index': 0, 'noise_seed': 10002, 'mario_state': 0, 'mario_inertia': 1.0, 'gen_type': 'interp'} --> gen_type=interp, inertia=1.000
+[2025-12-13 22:23:37]   id=8: {'level_width': 100, 'level_index': 0, 'noise_seed': 10002, 'mario_state': 0, 'mario_inertia': 1.15, 'gen_type': 'id'} --> gen_type=id, inertia=1.150
+[2025-12-13 22:23:37]   id=9: {'level_width': 100, 'level_index': 0, 'noise_seed': 10002, 'mario_state': 0, 'mario_inertia': 1.4, 'gen_type': 'extra'} --> gen_type=extra, inertia=1.400
+[2025-12-13 22:23:37]   id=10: {'level_width': 100, 'level_index': 0, 'noise_seed': 10003, 'mario_state': 0, 'mario_inertia': 0.6, 'gen_type': 'extra'} --> gen_type=extra, inertia=0.600
+[2025-12-13 22:23:37]   id=11: {'level_width': 100, 'level_index': 0, 'noise_seed': 10003, 'mario_state': 0, 'mario_inertia': 0.85, 'gen_type': 'id'} --> gen_type=id, inertia=0.850
+[2025-12-13 22:23:37]   id=12: {'level_width': 100, 'level_index': 0, 'noise_seed': 10003, 'mario_state': 0, 'mario_inertia': 1.0, 'gen_type': 'interp'} --> gen_type=interp, inertia=1.000
+[2025-12-13 22:23:37]   id=13: {'level_width': 100, 'level_index': 0, 'noise_seed': 10003, 'mario_state': 0, 'mario_inertia': 1.15, 'gen_type': 'id'} --> gen_type=id, inertia=1.150
+[2025-12-13 22:23:37]   id=14: {'level_width': 100, 'level_index': 0, 'noise_seed': 10003, 'mario_state': 0, 'mario_inertia': 1.4, 'gen_type': 'extra'} --> gen_type=extra, inertia=1.400
+[2025-12-13 22:23:37]   id=15: {'level_width': 100, 'level_index': 0, 'noise_seed': 10004, 'mario_state': 0, 'mario_inertia': 0.6, 'gen_type': 'extra'} --> gen_type=extra, inertia=0.600
+[2025-12-13 22:23:37]   id=16: {'level_width': 100, 'level_index': 0, 'noise_seed': 10004, 'mario_state': 0, 'mario_inertia': 0.85, 'gen_type': 'id'} --> gen_type=id, inertia=0.850
+[2025-12-13 22:23:37]   id=17: {'level_width': 100, 'level_index': 0, 'noise_seed': 10004, 'mario_state': 0, 'mario_inertia': 1.0, 'gen_type': 'interp'} --> gen_type=interp, inertia=1.000
+[2025-12-13 22:23:37]   id=18: {'level_width': 100, 'level_index': 0, 'noise_seed': 10004, 'mario_state': 0, 'mario_inertia': 1.15, 'gen_type': 'id'} --> gen_type=id, inertia=1.150
+[2025-12-13 22:23:37]   id=19: {'level_width': 100, 'level_index': 0, 'noise_seed': 10004, 'mario_state': 0, 'mario_inertia': 1.4, 'gen_type': 'extra'} --> gen_type=extra, inertia=1.400
+[2025-12-13 22:23:37]   id=20: {'level_width': 100, 'level_index': 0, 'noise_seed': 10005, 'mario_state': 0, 'mario_inertia': 0.6, 'gen_type': 'extra'} --> gen_type=extra, inertia=0.600
+[2025-12-13 22:23:37]   id=21: {'level_width': 100, 'level_index': 0, 'noise_seed': 10005, 'mario_state': 0, 'mario_inertia': 0.85, 'gen_type': 'id'} --> gen_type=id, inertia=0.850
+[2025-12-13 22:23:37]   id=22: {'level_width': 100, 'level_index': 0, 'noise_seed': 10005, 'mario_state': 0, 'mario_inertia': 1.0, 'gen_type': 'interp'} --> gen_type=interp, inertia=1.000
+[2025-12-13 22:23:37]   id=23: {'level_width': 100, 'level_index': 0, 'noise_seed': 10005, 'mario_state': 0, 'mario_inertia': 1.15, 'gen_type': 'id'} --> gen_type=id, inertia=1.150
+[2025-12-13 22:23:37]   id=24: {'level_width': 100, 'level_index': 0, 'noise_seed': 10005, 'mario_state': 0, 'mario_inertia': 1.4, 'gen_type': 'extra'} --> gen_type=extra, inertia=1.400
+[2025-12-13 22:23:37] Test contexts by type: {'id': 10, 'interp': 5, 'extra': 10}
+[2025-12-13 22:23:37] Creating 8 parallel environments...
+[2025-12-13 22:23:46] Creating evaluation environment...
+[2025-12-13 22:23:46] Train final eval contexts: 100 (n_inertias=100)
+[2025-12-13 22:23:46] Creating PPO model...
+[2025-12-13 22:23:49] Training Configuration:
+[2025-12-13 22:23:49]   Train contexts: 10
+[2025-12-13 22:23:49]   Test contexts: 25
+[2025-12-13 22:23:49]   Parallel envs: 8
+[2025-12-13 22:23:49]   Seed: 0
+[2025-12-13 22:23:49]   Level width: 100
+[2025-12-13 22:23:49]   Total timesteps: 500,000
+[2025-12-13 22:23:49]   Device: cpu
+[2025-12-13 22:23:49]   Use context in obs: True
+[2025-12-13 22:23:49]   Context keys: ['mario_inertia']
+[2025-12-13 22:23:49]   Feature fusion: hadamard
+[2025-12-13 22:23:49]   Test on train maps: False
+[2025-12-13 22:23:49]   Run Directory: logs/mario_inertia_quick/multi_1213_222337/seed_0/inertia_1213_222337
+[2025-12-13 22:23:49] ==================================================
+[2025-12-13 22:23:49] STARTING TRAINING
+[2025-12-13 22:23:49] ==================================================

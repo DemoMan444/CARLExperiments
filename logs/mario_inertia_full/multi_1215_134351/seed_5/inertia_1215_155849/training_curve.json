@@ -1,0 +1,72 @@
+[
+  {
+    "timesteps": 20000,
+    "mean_return": 6.16,
+    "mean_completion": 0.54094496448,
+    "uniform_ctx_mean_return": 4.598490624666759,
+    "uniform_ctx_mean_completion": 0.43222799211549623
+  },
+  {
+    "timesteps": 40000,
+    "mean_return": 6.24,
+    "mean_completion": 0.51601801134,
+    "uniform_ctx_mean_return": 5.281025922023053,
+    "uniform_ctx_mean_completion": 0.47001063548476585
+  },
+  {
+    "timesteps": 60000,
+    "mean_return": 8.94,
+    "mean_completion": 0.630568499884,
+    "uniform_ctx_mean_return": 6.424000000000001,
+    "uniform_ctx_mean_completion": 0.52952054535
+  },
+  {
+    "timesteps": 80000,
+    "mean_return": 5.86,
+    "mean_completion": 0.508384091892,
+    "uniform_ctx_mean_return": 7.031999999999999,
+    "uniform_ctx_mean_completion": 0.5551511722443999
+  },
+  {
+    "timesteps": 100000,
+    "mean_return": 5.66,
+    "mean_completion": 0.50501778048,
+    "uniform_ctx_mean_return": 6.674000000000001,
+    "uniform_ctx_mean_completion": 0.539823123509
+  },
+  {
+    "timesteps": 120000,
+    "mean_return": 5.3,
+    "mean_completion": 0.47339776867999994,
+    "uniform_ctx_mean_return": 6.0280000000000005,
+    "uniform_ctx_mean_completion": 0.5247424961488
+  },
+  {
+    "timesteps": 140000,
+    "mean_return": 6.34,
+    "mean_completion": 0.5455780843,
+    "uniform_ctx_mean_return": 6.179999999999999,
+    "uniform_ctx_mean_completion": 0.5451560560604
+  },
+  {
+    "timesteps": 160000,
+    "mean_return": 7.02,
+    "mean_completion": 0.574110409996,
+    "uniform_ctx_mean_return": 6.7,
+    "uniform_ctx_mean_completion": 0.5716317149096
+  },
+  {
+    "timesteps": 180000,
+    "mean_return": 8.16,
+    "mean_completion": 0.61114846212,
+    "uniform_ctx_mean_return": 7.348000000000001,
+    "uniform_ctx_mean_completion": 0.5943991674714
+  },
+  {
+    "timesteps": 200000,
+    "mean_return": 5.44,
+    "mean_completion": 0.51681269008,
+    "uniform_ctx_mean_return": 7.420000000000002,
+    "uniform_ctx_mean_completion": 0.5924028919102
+  }
+]

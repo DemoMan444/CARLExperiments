@@ -1,0 +1,131 @@
+{
+  "per_inertia": {
+    "0.6": {
+      "mean_return_mean": 6.5,
+      "mean_return_std": 2.7435743110038042,
+      "mean_completion_mean": 0.45465394626,
+      "mean_completion_std": 0.05996826836937524,
+      "success_rate_mean": 0.3,
+      "success_rate_std": 0.1979898987322333,
+      "n": 2
+    },
+    "0.85": {
+      "mean_return_mean": 3.78,
+      "mean_return_std": 0.028284271247461926,
+      "mean_completion_mean": 0.39559802958,
+      "mean_completion_std": 0.05056589608715269,
+      "success_rate_mean": 0.06,
+      "success_rate_std": 0.08485281374238571,
+      "n": 2
+    },
+    "1.0": {
+      "mean_return_mean": 4.48,
+      "mean_return_std": 1.0182337649086288,
+      "mean_completion_mean": 0.41097602348000006,
+      "mean_completion_std": 0.02878775463847484,
+      "success_rate_mean": 0.14,
+      "success_rate_std": 0.19798989873223333,
+      "n": 2
+    },
+    "1.15": {
+      "mean_return_mean": 5.02,
+      "mean_return_std": 1.2162236636408617,
+      "mean_completion_mean": 0.44205119849999996,
+      "mean_completion_std": 0.06020964164501211,
+      "success_rate_mean": 0.2,
+      "success_rate_std": 0.05656854249492379,
+      "n": 2
+    },
+    "1.4": {
+      "mean_return_mean": 4.92,
+      "mean_return_std": 0.5091168824543147,
+      "mean_completion_mean": 0.41789496466,
+      "mean_completion_std": 0.03107168185140579,
+      "success_rate_mean": 0.22,
+      "success_rate_std": 0.028284271247461888,
+      "n": 2
+    }
+  },
+  "per_group": {
+    "extra": {
+      "mean_return_mean": 5.71,
+      "mean_return_std": 1.6263455967290599,
+      "mean_completion_mean": 0.43627445546000004,
+      "mean_completion_std": 0.045519975110390555,
+      "success_rate_mean": 0.26,
+      "success_rate_std": 0.08485281374238571,
+      "n": 2
+    },
+    "id": {
+      "mean_return_mean": 4.4,
+      "mean_return_std": 0.6222539674441617,
+      "mean_completion_mean": 0.41882461404000004,
+      "mean_completion_std": 0.05538776886608244,
+      "success_rate_mean": 0.13,
+      "success_rate_std": 0.014142135623730963,
+      "n": 2
+    },
+    "interp": {
+      "mean_return_mean": 4.48,
+      "mean_return_std": 1.0182337649086288,
+      "mean_completion_mean": 0.41097602348000006,
+      "mean_completion_std": 0.02878775463847484,
+      "success_rate_mean": 0.14,
+      "success_rate_std": 0.19798989873223333,
+      "n": 2
+    }
+  },
+  "training_curve": {
+    "timesteps": [
+      100000,
+      200000,
+      300000,
+      400000,
+      500000
+    ],
+    "mean_return": [
+      6.21,
+      5.62,
+      5.29,
+      5.890000000000001,
+      7.07
+    ],
+    "mean_return_std": [
+      0.6929646455628169,
+      0.9616652224137042,
+      0.1555634918610409,
+      0.5515432893255073,
+      0.014142135623731277
+    ],
+    "mean_return_ci": [
+      6.225940000000002,
+      8.640079999999996,
+      1.397660000000004,
+      4.955340000000002,
+      0.12706000000000292
+    ],
+    "mean_completion": [
+      0.473967870444,
+      0.4427316372700001,
+      0.43921146792,
+      0.46453001679,
+      0.5223384439100001
+    ],
+    "mean_completion_std": [
+      0.038030076887221334,
+      0.031131128049799537,
+      0.0006767826482967363,
+      0.03190939562499736,
+      0.01344310837190543
+    ],
+    "mean_completion_ci": [
+      0.3416811787027359,
+      0.2796975814154999,
+      0.006080552865600157,
+      0.2866899254811798,
+      0.1207795905215397
+    ],
+    "n_seeds": 2
+  },
+  "n_runs": 2
+}
