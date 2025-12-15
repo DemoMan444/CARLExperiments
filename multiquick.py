@@ -1,6 +1,8 @@
 # run_multi_seeds.py
 from __future__ import annotations
+import argparse
 import json
+import os
 import time
 from pathlib import Path
 from copy import deepcopy
@@ -8,6 +10,7 @@ from collections import defaultdict
 import matplotlib
 matplotlib.use("Agg")  # non-interactive backend
 import matplotlib.pyplot as plt
+from json import JSONDecodeError
 
 import numpy as np
 
@@ -24,6 +27,55 @@ QUICK_TEST = False
 # Smoothing for episode-level reward curve (higher = smoother)
 EPISODE_RETURN_SMOOTH_WINDOW = 50
 # ============================================================================
+
+def atomic_write_json(path: Path, data: object) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    with tmp.open("w") as f:
+        json.dump(data, f, indent=2)
+    os.replace(tmp, path)
+
+
+def find_latest_multi_run(base_log_dir: Path) -> Path | None:
+    if not base_log_dir.exists():
+        return None
+    candidates = [p for p in base_log_dir.iterdir() if p.is_dir() and p.name.startswith("multi_")]
+    if not candidates:
+        return None
+    return max(candidates, key=lambda p: p.stat().st_mtime)
+
+
+def find_latest_seed_run_dir(seed_dir: Path) -> Path | None:
+    if not seed_dir.exists():
+        return None
+    # `train()` writes into `seed_dir/inertia_*/final_results.json`
+    candidates = list(seed_dir.glob("inertia_*/final_results.json"))
+    if not candidates:
+        # Fallback: in case the directory structure changes, look a bit deeper.
+        candidates = list(seed_dir.glob("**/final_results.json"))
+    if not candidates:
+        return None
+    latest_final = max(candidates, key=lambda p: p.stat().st_mtime)
+    return latest_final.parent
+
+
+def load_completed_run(seed: int, seed_root: Path) -> dict | None:
+    run_dir = find_latest_seed_run_dir(seed_root)
+    if run_dir is None:
+        return None
+
+    final_path = run_dir / "final_results.json"
+    try:
+        with final_path.open("r") as f:
+            results = json.load(f)
+    except (OSError, JSONDecodeError):
+        return None
+
+    if not isinstance(results, dict) or "stochastic" not in results:
+        return None
+
+    return {"seed": seed, "results": results, "run_dir": str(run_dir)}
+
 
 def t_critical_975(df: int) -> float:
     """
@@ -80,11 +132,13 @@ def t_critical_975(df: int) -> float:
     return table[nearest]
 
 
-def get_config() -> TrainingConfig:
+def get_config(quick_test: bool | None = None) -> TrainingConfig:
     """Get configuration based on QUICK_TEST toggle."""
+    if quick_test is None:
+        quick_test = QUICK_TEST
     cfg = TrainingConfig()
     
-    if QUICK_TEST:
+    if quick_test:
         # Quick test settings - minimal resources for code verification
         cfg.total_timesteps = 50_000
         cfg.n_eval_episodes = 5
@@ -104,21 +158,24 @@ def get_config() -> TrainingConfig:
         cfg.print_freq = 20_000
         cfg.checkpoint_freq = 110_000
         cfg.n_envs = 8
-    
     return cfg
 
 
-def get_seeds() -> list[int]:
+def get_seeds(quick_test: bool | None = None) -> list[int]:
     """Get seeds based on QUICK_TEST toggle."""
-    if QUICK_TEST:
+    if quick_test is None:
+        quick_test = QUICK_TEST
+    if quick_test:
         return [0, 1]  # fewer seeds for quick test
     else:
-        return [0, 1, 2, 3, 4]  # more seeds for full experiment
+        return [0, 1, 2, 3, 4, 5, 6]  # more seeds for full experiment
 
 
-def get_log_dir() -> str:
+def get_log_dir(quick_test: bool | None = None) -> str:
     """Get log directory based on QUICK_TEST toggle."""
-    if QUICK_TEST:
+    if quick_test is None:
+        quick_test = QUICK_TEST
+    if quick_test:
         return "./logs/mario_inertia_quick"
     else:
         return "./logs/mario_inertia_full"
@@ -188,23 +245,28 @@ def aggregate_runs(runs: list[dict]) -> dict:
     per_timestep_vals = defaultdict(lambda: {"returns": [], "completions": []})
 
     for run in runs:
-        res = run["results"]["stochastic"]
+        results = run.get("results", {})
+        if not isinstance(results, dict):
+            continue
+        res = results.get("stochastic", None)
+        if not isinstance(res, dict):
+            continue
 
         # Per-inertia
-        for inertia, stats in res["per_inertia"].items():
+        for inertia, stats in (res.get("per_inertia", {}) or {}).items():
             inertia_f = float(inertia)
             per_inertia_vals[inertia_f]["returns"].append(float(stats.get("mean_return", float("nan"))))
             per_inertia_vals[inertia_f]["completions"].append(float(stats.get("mean_completion", float("nan"))))
             per_inertia_vals[inertia_f]["success_rates"].append(float(stats.get("success_rate", float("nan"))))
 
         # Per generalization group
-        for gtype, stats in res["per_group"].items():
+        for gtype, stats in (res.get("per_group", {}) or {}).items():
             per_group_vals[gtype]["returns"].append(float(stats.get("mean_return", float("nan"))))
             per_group_vals[gtype]["completions"].append(float(stats.get("mean_completion", float("nan"))))
             per_group_vals[gtype]["success_rates"].append(float(stats.get("success_rate", float("nan"))))
 
         # Training curve
-        curve = run["results"].get("training_curve", [])
+        curve = results.get("training_curve", [])
         for pt in curve:
             t = int(pt["timesteps"])
             mr = pt.get("mean_return", None)
@@ -314,6 +376,11 @@ def run_multi_seed_experiment(
     seeds: list[int],
     base_log_dir: str,
     base_config: TrainingConfig,
+    *,
+    resume_run_dir: str | None = None,
+    skip_completed: bool = True,
+    make_plots: bool = True,
+    plot_partial: bool = False,
 ):
     """
     High-level wrapper:
@@ -324,32 +391,82 @@ def run_multi_seed_experiment(
     base = Path(base_log_dir)
     base.mkdir(parents=True, exist_ok=True)
 
-    # Create a run-specific directory so multiple runs don't overwrite each other.
-    run_id = time.strftime("multi_%m%d_%H%M%S")
-    run_dir = base / run_id
-    # Avoid collisions if you launch multiple runs within the same second.
-    if run_dir.exists():
-        run_dir = base / f"{run_id}_{int(time.time() * 1000) % 1_000_000:06d}"
-    run_dir.mkdir(parents=True, exist_ok=True)
-    print(f"\nRun directory: {run_dir}")
+    if resume_run_dir is not None:
+        run_dir = Path(resume_run_dir)
+        if not run_dir.exists():
+            raise FileNotFoundError(f"Resume run directory not found: {run_dir}")
+        print(f"\nResuming run directory: {run_dir}")
+    else:
+        # Create a run-specific directory so multiple runs don't overwrite each other.
+        run_id = time.strftime("multi_%m%d_%H%M%S")
+        run_dir = base / run_id
+        # Avoid collisions if you launch multiple runs within the same second.
+        if run_dir.exists():
+            run_dir = base / f"{run_id}_{int(time.time() * 1000) % 1_000_000:06d}"
+        run_dir.mkdir(parents=True, exist_ok=True)
+        print(f"\nRun directory: {run_dir}")
+
+    # Save lightweight metadata once (helpful for resume/debugging).
+    meta_path = run_dir / "run_meta.json"
+    if not meta_path.exists():
+        atomic_write_json(
+            meta_path,
+            {
+                "created_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+                "requested_seeds": list(seeds),
+                "base_log_dir": str(base_log_dir),
+                "skip_completed": bool(skip_completed),
+            },
+        )
+
+    # Pre-load any completed seeds already on disk (so resume can skip them).
+    existing: dict[int, dict] = {}
+    for seed in seeds:
+        seed_root = run_dir / f"seed_{seed}"
+        loaded = load_completed_run(seed, seed_root)
+        if loaded is not None:
+            existing[seed] = loaded
 
     all_runs = []
     for seed in seeds:
-        print(f"=== Starting run for seed={seed} ===")
-        run_out = run_single_seed(seed, base_log_dir=str(run_dir), base_config=base_config)
-        all_runs.append(run_out)
+        if skip_completed and seed in existing:
+            print(f"=== Seed={seed} already completed; skipping ===")
+            all_runs.append(existing[seed])
+        else:
+            print(f"=== Starting run for seed={seed} ===")
+            run_out = run_single_seed(seed, base_log_dir=str(run_dir), base_config=base_config)
+            all_runs.append(run_out)
+
+        # Persist progress after every seed, so a crash doesn't waste completed work.
+        completed_seeds = sorted({int(r["seed"]) for r in all_runs if "seed" in r})
+        missing_seeds = sorted([s for s in seeds if s not in set(completed_seeds)])
+        seed_run_dirs = {int(r["seed"]): str(r.get("run_dir", "")) for r in all_runs if "seed" in r}
+
+        atomic_write_json(
+            run_dir / "seed_progress.json",
+            {
+                "requested_seeds": list(seeds),
+                "completed_seeds": completed_seeds,
+                "missing_seeds": missing_seeds,
+                "seed_run_dirs": seed_run_dirs,
+                "updated_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+            },
+        )
+
+        agg_partial = aggregate_runs(all_runs)
+        atomic_write_json(run_dir / "aggregate_results.json", agg_partial)
 
     agg = aggregate_runs(all_runs)
+    print(f"\nAggregated results saved to: {run_dir / 'aggregate_results.json'}")
 
-    # Save aggregated results
-    agg_path = run_dir / "aggregate_results.json"
-    with agg_path.open("w") as f:
-        json.dump(agg, f, indent=2)
-
-    print(f"\nAggregated results saved to: {agg_path}")
-
-    plot_multi_seed_training_and_eval(all_runs, agg, str(run_dir))
-    print(f"Plots saved into: {run_dir}")
+    completed_set = {int(r["seed"]) for r in all_runs if "seed" in r}
+    all_done = completed_set == set(seeds)
+    if make_plots and (all_done or plot_partial):
+        plot_multi_seed_training_and_eval(all_runs, agg, str(run_dir))
+        print(f"Plots saved into: {run_dir}")
+    elif make_plots and not all_done:
+        missing = sorted([s for s in seeds if s not in completed_set])
+        print(f"Skipping plots until all seeds are done (missing: {missing}). Use --plot-partial to force.")
 
     return all_runs, agg
 
@@ -559,12 +676,6 @@ def plot_multi_seed_training_and_eval(
 # ============================================================================
 
 if __name__ == "__main__":
-<<<<<<< HEAD
-    # Get configuration based on QUICK_TEST toggle
-    cfg = get_config()
-    seeds = get_seeds()
-    log_dir = get_log_dir()
-=======
     parser = argparse.ArgumentParser(
         description="Run multi-seed Mario inertia experiments with optional resume/skip.",
     )
@@ -646,7 +757,6 @@ if __name__ == "__main__":
             resume_dir = str(latest)
         else:
             resume_dir = args.resume
->>>>>>> b1cf95e (final maybe)
     
     # Print mode info
     mode = "QUICK TEST" if QUICK_TEST else "FULL EXPERIMENT"
@@ -672,6 +782,10 @@ if __name__ == "__main__":
         seeds=seeds,
         base_log_dir=log_dir,
         base_config=cfg,
+        resume_run_dir=resume_dir,
+        skip_completed=bool(args.skip_completed),
+        make_plots=bool(args.make_plots),
+        plot_partial=bool(args.plot_partial),
     )
     
     # Print results
