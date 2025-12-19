@@ -198,10 +198,12 @@ class TrainingConfig:
     # How to fuse vision + context in the policy:
     # - "concat": SB3 CombinedExtractor (default behavior)
     # - "hadamard": cGate/Hadamard (element-wise) fusion in a custom extractor
-    feature_fusion: str = "hadamard"  # "concat" or "hadamard"
+    # - "gmu": Gated Multimodal Unit (GMU) fusion in a custom extractor
+    feature_fusion: str = "gmu"  # "concat", "hadamard", or "gmu"
     extractor_features_dim: int = 256
     context_hidden_dim: int = 256
     hadamard_gate_activation: str = "relu"  # "relu" or "sigmoid"
+    gmu_fusion_dim: int | None = None  # internal GMU hidden dim; defaults to extractor_features_dim
 
     # If True: test on the SAME maps as training (same noise_seed etc.), only inertia changes.
     # If False: test on NEW maps (different noise_seed) as in the original version.
@@ -621,6 +623,103 @@ class HadamardGateExtractor(BaseFeaturesExtractor):
         ctx_feat = self.gate_activation(self.context_proj(ctx))
         fused = frame_feat * ctx_feat
         return self.final_layer(fused)
+
+
+# ---------------------------
+# GMU (Gated Multimodal Unit) Fusion Extractor
+# ---------------------------
+class GMUFeatureExtractor(BaseFeaturesExtractor):
+    """
+    GMU-based multi-input feature extractor.
+
+    Expects an observation space of type Dict with keys:
+      - "img": Box(C, H, W)  (visual frames)
+      - "ctx": Box(D,)       (context vector)
+
+    Fuses the two modalities using a Gated Multimodal Unit:
+      x_v = proj_v(cnn(img))         # visual projection
+      x_t = proj_t(ctx)              # context projection
+      h_v = tanh(W_v x_v)
+      h_t = tanh(W_t x_t)
+      z   = sigmoid(W_z [x_v, x_t])
+      h   = z * h_v + (1 - z) * h_t  # fused feature
+    """
+
+    def __init__(
+        self,
+        observation_space: spaces.Dict,
+        features_dim: int = 256,
+        gmu_fusion_dim: int | None = None,
+    ):
+        super().__init__(observation_space, features_dim)
+
+        if not isinstance(observation_space, spaces.Dict):
+            raise TypeError("GMUFeatureExtractor expects a Dict observation space.")
+        if "img" not in observation_space.spaces or "ctx" not in observation_space.spaces:
+            raise KeyError('GMUFeatureExtractor requires observation keys "img" and "ctx".')
+
+        img_space = observation_space.spaces["img"]
+        ctx_space = observation_space.spaces["ctx"]
+
+        if not isinstance(img_space, spaces.Box) or img_space.shape is None or len(img_space.shape) != 3:
+            raise TypeError('Observation space "img" must be a Box(C,H,W).')
+        if not isinstance(ctx_space, spaces.Box) or ctx_space.shape is None or len(ctx_space.shape) != 1:
+            raise TypeError('Observation space "ctx" must be a 1D Box.')
+
+        in_channels, height, width = img_space.shape
+        ctx_dim = int(ctx_space.shape[0])
+
+        fusion_dim = int(features_dim) if gmu_fusion_dim is None else int(gmu_fusion_dim)
+
+        self.cnn = nn.Sequential(
+            nn.Conv2d(in_channels, 32, kernel_size=8, stride=4),
+            nn.ReLU(),
+            nn.Conv2d(32, 64, kernel_size=4, stride=2),
+            nn.ReLU(),
+            nn.Conv2d(64, 64, kernel_size=3, stride=1),
+            nn.ReLU(),
+            nn.Flatten(),
+        )
+
+        with torch.no_grad():
+            dummy = torch.zeros(1, in_channels, height, width)
+            n_flat = int(self.cnn(dummy).shape[1])
+
+        self.proj_v = nn.Linear(n_flat, fusion_dim)
+        self.proj_t = nn.Linear(ctx_dim, fusion_dim)
+
+        self.W_v = nn.Linear(fusion_dim, fusion_dim)
+        self.W_t = nn.Linear(fusion_dim, fusion_dim)
+        self.W_z = nn.Linear(2 * fusion_dim, fusion_dim)
+
+        self.final_proj: nn.Module
+        if fusion_dim != int(features_dim):
+            self.final_proj = nn.Linear(fusion_dim, int(features_dim))
+        else:
+            self.final_proj = nn.Identity()
+
+        self._features_dim = int(features_dim)
+
+    def forward(self, observations: Dict[str, torch.Tensor]) -> torch.Tensor:
+        img = observations["img"]
+        ctx = observations["ctx"]
+
+        if img.dtype == torch.uint8:
+            img = img.float() / 255.0
+        else:
+            img = img.float()
+        ctx = ctx.float()
+
+        x_raw_v = self.cnn(img)
+        x_v = self.proj_v(x_raw_v)
+        x_t = self.proj_t(ctx)
+
+        h_v = torch.tanh(self.W_v(x_v))
+        h_t = torch.tanh(self.W_t(x_t))
+
+        z = torch.sigmoid(self.W_z(torch.cat([x_v, x_t], dim=1)))
+        h = z * h_v + (1.0 - z) * h_t
+        return self.final_proj(h)
 
 
 # ---------------------------
@@ -1440,8 +1539,8 @@ def setup_training(config: TrainingConfig):
     # 4. Model Setup
     # ---------------------------------------------------------
     fusion = str(config.feature_fusion).lower().strip()
-    if fusion not in ("concat", "hadamard"):
-        raise ValueError('config.feature_fusion must be "concat" or "hadamard".')
+    if fusion not in ("concat", "hadamard", "gmu"):
+        raise ValueError('config.feature_fusion must be "concat", "hadamard", or "gmu".')
 
     if fusion == "hadamard":
         if not ctx_keys:
@@ -1452,6 +1551,20 @@ def setup_training(config: TrainingConfig):
                 features_dim=int(config.extractor_features_dim),
                 context_hidden_dim=int(config.context_hidden_dim),
                 gate_activation=str(config.hadamard_gate_activation),
+            ),
+            net_arch=dict(pi=[256], vf=[256]),
+            activation_fn=nn.ReLU,
+            ortho_init=False,
+            normalize_images=True,
+        )
+    elif fusion == "gmu":
+        if not ctx_keys:
+            raise ValueError('GMU fusion requires config.use_context=True and non-empty config.context_keys.')
+        policy_kwargs = dict(
+            features_extractor_class=GMUFeatureExtractor,
+            features_extractor_kwargs=dict(
+                features_dim=int(config.extractor_features_dim),
+                gmu_fusion_dim=config.gmu_fusion_dim,
             ),
             net_arch=dict(pi=[256], vf=[256]),
             activation_fn=nn.ReLU,
