@@ -1,0 +1,72 @@
+[
+  {
+    "timesteps": 20000,
+    "mean_return": 5.64,
+    "mean_completion": 0.5081507089339999,
+    "uniform_ctx_mean_return": 4.7831022408963575,
+    "uniform_ctx_mean_completion": 0.45290634272138763
+  },
+  {
+    "timesteps": 40000,
+    "mean_return": 5.8,
+    "mean_completion": 0.51908729062,
+    "uniform_ctx_mean_return": 5.582684169377008,
+    "uniform_ctx_mean_completion": 0.5068596173966413
+  },
+  {
+    "timesteps": 60000,
+    "mean_return": 6.72,
+    "mean_completion": 0.57452292668,
+    "uniform_ctx_mean_return": 6.593999999999999,
+    "uniform_ctx_mean_completion": 0.5564848327120001
+  },
+  {
+    "timesteps": 80000,
+    "mean_return": 7.38,
+    "mean_completion": 0.64034719496,
+    "uniform_ctx_mean_return": 7.095999999999999,
+    "uniform_ctx_mean_completion": 0.5789492475476
+  },
+  {
+    "timesteps": 100000,
+    "mean_return": 5.58,
+    "mean_completion": 0.50584416174,
+    "uniform_ctx_mean_return": 7.071999999999998,
+    "uniform_ctx_mean_completion": 0.5832206001174
+  },
+  {
+    "timesteps": 120000,
+    "mean_return": 7.66,
+    "mean_completion": 0.579222055942,
+    "uniform_ctx_mean_return": 6.981999999999999,
+    "uniform_ctx_mean_completion": 0.5664238323902
+  },
+  {
+    "timesteps": 140000,
+    "mean_return": 6.0,
+    "mean_completion": 0.56190500642,
+    "uniform_ctx_mean_return": 6.799999999999999,
+    "uniform_ctx_mean_completion": 0.5575078083792
+  },
+  {
+    "timesteps": 160000,
+    "mean_return": 7.98,
+    "mean_completion": 0.5904936991199999,
+    "uniform_ctx_mean_return": 7.284000000000001,
+    "uniform_ctx_mean_completion": 0.585330726236
+  },
+  {
+    "timesteps": 180000,
+    "mean_return": 7.06,
+    "mean_completion": 0.571400436084,
+    "uniform_ctx_mean_return": 7.634,
+    "uniform_ctx_mean_completion": 0.5902324436644
+  },
+  {
+    "timesteps": 200000,
+    "mean_return": 9.84,
+    "mean_completion": 0.7084669906800001,
+    "uniform_ctx_mean_return": 7.5920000000000005,
+    "uniform_ctx_mean_completion": 0.5922321692523999
+  }
+]

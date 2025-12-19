@@ -1,0 +1,72 @@
+[
+  {
+    "timesteps": 20000,
+    "mean_return": 6.74,
+    "mean_completion": 0.47506570810200005,
+    "uniform_ctx_mean_return": 4.878214285714285,
+    "uniform_ctx_mean_completion": 0.4139990568321429
+  },
+  {
+    "timesteps": 40000,
+    "mean_return": 7.38,
+    "mean_completion": 0.6006086375199999,
+    "uniform_ctx_mean_return": 5.457421018697614,
+    "uniform_ctx_mean_completion": 0.46136862920945865
+  },
+  {
+    "timesteps": 60000,
+    "mean_return": 8.0,
+    "mean_completion": 0.6336050953,
+    "uniform_ctx_mean_return": 6.404000000000001,
+    "uniform_ctx_mean_completion": 0.526153006121
+  },
+  {
+    "timesteps": 80000,
+    "mean_return": 6.42,
+    "mean_completion": 0.4879991766,
+    "uniform_ctx_mean_return": 6.587999999999999,
+    "uniform_ctx_mean_completion": 0.535673666239
+  },
+  {
+    "timesteps": 100000,
+    "mean_return": 8.04,
+    "mean_completion": 0.59648337272,
+    "uniform_ctx_mean_return": 6.985999999999999,
+    "uniform_ctx_mean_completion": 0.556902886693
+  },
+  {
+    "timesteps": 120000,
+    "mean_return": 6.72,
+    "mean_completion": 0.54441810032,
+    "uniform_ctx_mean_return": 7.5200000000000005,
+    "uniform_ctx_mean_completion": 0.5650820950411999
+  },
+  {
+    "timesteps": 140000,
+    "mean_return": 7.36,
+    "mean_completion": 0.54539291844,
+    "uniform_ctx_mean_return": 7.652000000000001,
+    "uniform_ctx_mean_completion": 0.5599791115054
+  },
+  {
+    "timesteps": 160000,
+    "mean_return": 9.26,
+    "mean_completion": 0.61588051762,
+    "uniform_ctx_mean_return": 8.194,
+    "uniform_ctx_mean_completion": 0.5776217939878
+  },
+  {
+    "timesteps": 180000,
+    "mean_return": 8.72,
+    "mean_completion": 0.59955460804,
+    "uniform_ctx_mean_return": 7.9879999999999995,
+    "uniform_ctx_mean_completion": 0.5734955562590001
+  },
+  {
+    "timesteps": 200000,
+    "mean_return": 7.72,
+    "mean_completion": 0.58307319856,
+    "uniform_ctx_mean_return": 7.989999999999999,
+    "uniform_ctx_mean_completion": 0.5810443879448
+  }
+]
