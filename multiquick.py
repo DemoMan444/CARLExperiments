@@ -708,9 +708,9 @@ if __name__ == "__main__":
     fusion_group = parser.add_mutually_exclusive_group()
     fusion_group.add_argument(
         "--fusion",
-        choices=["concat", "hadamard"],
+        choices=["concat", "hadamard", "gmu"],
         default=None,
-        help='Feature fusion method: "concat" (default) or "hadamard" (cGate).',
+        help='Feature fusion method: "concat", "hadamard" (cGate), or "gmu".',
     )
     fusion_group.add_argument(
         "--hadamard",
@@ -737,9 +737,10 @@ if __name__ == "__main__":
     # This runner is intended for inertia-only context.
     cfg.context_keys = ("mario_inertia",)
 
-    if str(cfg.feature_fusion).lower().strip() == "hadamard":
+    fusion = str(cfg.feature_fusion).lower().strip()
+    if fusion in ("hadamard", "gmu"):
         if args.use_context is False:
-            raise SystemExit("--hadamard/--fusion hadamard requires --use-context (or omit --no-context).")
+            raise SystemExit(f"--fusion {fusion} requires --use-context (or omit --no-context).")
         cfg.use_context = True
     seeds = (
         [int(s.strip()) for s in args.seeds.split(",") if s.strip() != ""]

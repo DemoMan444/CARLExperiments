@@ -1,0 +1,207 @@
+[2025-12-17 13:38:52] Initialized run directory: logs/mario_inertia_full/multi_1217_121945/seed_3/inertia_1217_133852
+[2025-12-17 13:38:52] Generating training contexts (varying only mario_inertia)...
+[2025-12-17 13:38:52] Training inertia resampling enabled: 2 ranges x 100 values (rotating pool)
+[2025-12-17 13:38:52] Generating TEST contexts on NEW MAPS (different maps, varying mario_inertia)...
+[2025-12-17 13:38:52] Using context keys in observations: ['mario_inertia']
+[2025-12-17 13:38:52] Training contexts (all):
+[2025-12-17 13:38:52]   id=0: {'level_width': 100, 'level_index': 0, 'noise_seed': 4, 'mario_state': 0, 'mario_inertia': 0.8500000000000001, 'train_range_index': 0}
+[2025-12-17 13:38:52]   id=1: {'level_width': 100, 'level_index': 0, 'noise_seed': 4, 'mario_state': 0, 'mario_inertia': 1.15, 'train_range_index': 1}
+[2025-12-17 13:38:52]   id=2: {'level_width': 100, 'level_index': 0, 'noise_seed': 5, 'mario_state': 0, 'mario_inertia': 0.8500000000000001, 'train_range_index': 0}
+[2025-12-17 13:38:52]   id=3: {'level_width': 100, 'level_index': 0, 'noise_seed': 5, 'mario_state': 0, 'mario_inertia': 1.15, 'train_range_index': 1}
+[2025-12-17 13:38:52]   id=4: {'level_width': 100, 'level_index': 0, 'noise_seed': 6, 'mario_state': 0, 'mario_inertia': 0.8500000000000001, 'train_range_index': 0}
+[2025-12-17 13:38:52]   id=5: {'level_width': 100, 'level_index': 0, 'noise_seed': 6, 'mario_state': 0, 'mario_inertia': 1.15, 'train_range_index': 1}
+[2025-12-17 13:38:52]   id=6: {'level_width': 100, 'level_index': 0, 'noise_seed': 7, 'mario_state': 0, 'mario_inertia': 0.8500000000000001, 'train_range_index': 0}
+[2025-12-17 13:38:52]   id=7: {'level_width': 100, 'level_index': 0, 'noise_seed': 7, 'mario_state': 0, 'mario_inertia': 1.15, 'train_range_index': 1}
+[2025-12-17 13:38:52]   id=8: {'level_width': 100, 'level_index': 0, 'noise_seed': 8, 'mario_state': 0, 'mario_inertia': 0.8500000000000001, 'train_range_index': 0}
+[2025-12-17 13:38:52]   id=9: {'level_width': 100, 'level_index': 0, 'noise_seed': 8, 'mario_state': 0, 'mario_inertia': 1.15, 'train_range_index': 1}
+[2025-12-17 13:38:52] Test contexts (all):
+[2025-12-17 13:38:52]   id=0: {'level_width': 100, 'level_index': 0, 'noise_seed': 10004, 'mario_state': 0, 'mario_inertia': 0.6, 'gen_type': 'extra'} --> gen_type=extra, inertia=0.600
+[2025-12-17 13:38:52]   id=1: {'level_width': 100, 'level_index': 0, 'noise_seed': 10004, 'mario_state': 0, 'mario_inertia': 0.85, 'gen_type': 'id'} --> gen_type=id, inertia=0.850
+[2025-12-17 13:38:52]   id=2: {'level_width': 100, 'level_index': 0, 'noise_seed': 10004, 'mario_state': 0, 'mario_inertia': 1.0, 'gen_type': 'interp'} --> gen_type=interp, inertia=1.000
+[2025-12-17 13:38:52]   id=3: {'level_width': 100, 'level_index': 0, 'noise_seed': 10004, 'mario_state': 0, 'mario_inertia': 1.15, 'gen_type': 'id'} --> gen_type=id, inertia=1.150
+[2025-12-17 13:38:52]   id=4: {'level_width': 100, 'level_index': 0, 'noise_seed': 10004, 'mario_state': 0, 'mario_inertia': 1.4, 'gen_type': 'extra'} --> gen_type=extra, inertia=1.400
+[2025-12-17 13:38:52]   id=5: {'level_width': 100, 'level_index': 0, 'noise_seed': 10005, 'mario_state': 0, 'mario_inertia': 0.6, 'gen_type': 'extra'} --> gen_type=extra, inertia=0.600
+[2025-12-17 13:38:52]   id=6: {'level_width': 100, 'level_index': 0, 'noise_seed': 10005, 'mario_state': 0, 'mario_inertia': 0.85, 'gen_type': 'id'} --> gen_type=id, inertia=0.850
+[2025-12-17 13:38:52]   id=7: {'level_width': 100, 'level_index': 0, 'noise_seed': 10005, 'mario_state': 0, 'mario_inertia': 1.0, 'gen_type': 'interp'} --> gen_type=interp, inertia=1.000
+[2025-12-17 13:38:52]   id=8: {'level_width': 100, 'level_index': 0, 'noise_seed': 10005, 'mario_state': 0, 'mario_inertia': 1.15, 'gen_type': 'id'} --> gen_type=id, inertia=1.150
+[2025-12-17 13:38:52]   id=9: {'level_width': 100, 'level_index': 0, 'noise_seed': 10005, 'mario_state': 0, 'mario_inertia': 1.4, 'gen_type': 'extra'} --> gen_type=extra, inertia=1.400
+[2025-12-17 13:38:52]   id=10: {'level_width': 100, 'level_index': 0, 'noise_seed': 10006, 'mario_state': 0, 'mario_inertia': 0.6, 'gen_type': 'extra'} --> gen_type=extra, inertia=0.600
+[2025-12-17 13:38:52]   id=11: {'level_width': 100, 'level_index': 0, 'noise_seed': 10006, 'mario_state': 0, 'mario_inertia': 0.85, 'gen_type': 'id'} --> gen_type=id, inertia=0.850
+[2025-12-17 13:38:52]   id=12: {'level_width': 100, 'level_index': 0, 'noise_seed': 10006, 'mario_state': 0, 'mario_inertia': 1.0, 'gen_type': 'interp'} --> gen_type=interp, inertia=1.000
+[2025-12-17 13:38:52]   id=13: {'level_width': 100, 'level_index': 0, 'noise_seed': 10006, 'mario_state': 0, 'mario_inertia': 1.15, 'gen_type': 'id'} --> gen_type=id, inertia=1.150
+[2025-12-17 13:38:52]   id=14: {'level_width': 100, 'level_index': 0, 'noise_seed': 10006, 'mario_state': 0, 'mario_inertia': 1.4, 'gen_type': 'extra'} --> gen_type=extra, inertia=1.400
+[2025-12-17 13:38:52]   id=15: {'level_width': 100, 'level_index': 0, 'noise_seed': 10007, 'mario_state': 0, 'mario_inertia': 0.6, 'gen_type': 'extra'} --> gen_type=extra, inertia=0.600
+[2025-12-17 13:38:52]   id=16: {'level_width': 100, 'level_index': 0, 'noise_seed': 10007, 'mario_state': 0, 'mario_inertia': 0.85, 'gen_type': 'id'} --> gen_type=id, inertia=0.850
+[2025-12-17 13:38:52]   id=17: {'level_width': 100, 'level_index': 0, 'noise_seed': 10007, 'mario_state': 0, 'mario_inertia': 1.0, 'gen_type': 'interp'} --> gen_type=interp, inertia=1.000
+[2025-12-17 13:38:52]   id=18: {'level_width': 100, 'level_index': 0, 'noise_seed': 10007, 'mario_state': 0, 'mario_inertia': 1.15, 'gen_type': 'id'} --> gen_type=id, inertia=1.150
+[2025-12-17 13:38:52]   id=19: {'level_width': 100, 'level_index': 0, 'noise_seed': 10007, 'mario_state': 0, 'mario_inertia': 1.4, 'gen_type': 'extra'} --> gen_type=extra, inertia=1.400
+[2025-12-17 13:38:52]   id=20: {'level_width': 100, 'level_index': 0, 'noise_seed': 10008, 'mario_state': 0, 'mario_inertia': 0.6, 'gen_type': 'extra'} --> gen_type=extra, inertia=0.600
+[2025-12-17 13:38:52]   id=21: {'level_width': 100, 'level_index': 0, 'noise_seed': 10008, 'mario_state': 0, 'mario_inertia': 0.85, 'gen_type': 'id'} --> gen_type=id, inertia=0.850
+[2025-12-17 13:38:52]   id=22: {'level_width': 100, 'level_index': 0, 'noise_seed': 10008, 'mario_state': 0, 'mario_inertia': 1.0, 'gen_type': 'interp'} --> gen_type=interp, inertia=1.000
+[2025-12-17 13:38:52]   id=23: {'level_width': 100, 'level_index': 0, 'noise_seed': 10008, 'mario_state': 0, 'mario_inertia': 1.15, 'gen_type': 'id'} --> gen_type=id, inertia=1.150
+[2025-12-17 13:38:52]   id=24: {'level_width': 100, 'level_index': 0, 'noise_seed': 10008, 'mario_state': 0, 'mario_inertia': 1.4, 'gen_type': 'extra'} --> gen_type=extra, inertia=1.400
+[2025-12-17 13:38:52] Test contexts by type: {'id': 10, 'interp': 5, 'extra': 10}
+[2025-12-17 13:38:52] Creating 8 parallel environments...
+[2025-12-17 13:39:11] Creating evaluation environment...
+[2025-12-17 13:39:11] Train final eval contexts: 100 (n_inertias=100)
+[2025-12-17 13:39:11] Creating PPO model...
+[2025-12-17 13:39:11] Training Configuration:
+[2025-12-17 13:39:11]   Train contexts: 10
+[2025-12-17 13:39:11]   Test contexts: 25
+[2025-12-17 13:39:11]   Parallel envs: 8
+[2025-12-17 13:39:11]   Seed: 3
+[2025-12-17 13:39:11]   Level width: 100
+[2025-12-17 13:39:11]   Total timesteps: 200,000
+[2025-12-17 13:39:11]   Device: cpu
+[2025-12-17 13:39:11]   Use context in obs: True
+[2025-12-17 13:39:11]   Context keys: ['mario_inertia']
+[2025-12-17 13:39:11]   Feature fusion: concat
+[2025-12-17 13:39:11]   Test on train maps: False
+[2025-12-17 13:39:11]   Run Directory: logs/mario_inertia_full/multi_1217_121945/seed_3/inertia_1217_133852
+[2025-12-17 13:39:11] ==================================================
+[2025-12-17 13:39:11] STARTING TRAINING
+[2025-12-17 13:39:11] ==================================================
+[2025-12-17 13:41:32] ----------------------------------------------------------------
+[2025-12-17 13:41:32] Train @ 20,000 steps
+[2025-12-17 13:41:32]   Episodes (total): 333
+[2025-12-17 13:41:32]   Window(50) mean return (episode-weighted): 6.00 
+[2025-12-17 13:41:32]   Window(50) mean length: 62.7
+[2025-12-17 13:41:32]   Window(50) mean completion: 43.75%
+[2025-12-17 13:41:32]   Uniform-per-context mean return: 3.49
+[2025-12-17 13:41:32]   Uniform-per-context mean completion: 32.71%
+[2025-12-17 13:41:32]   Context distribution (last 50 eps): 0:12% 1:10% 2:8% 3:8% 4:10% 5:12% 6:10% 7:10% 8:10% 9:10%
+[2025-12-17 13:41:32] ----------------------------------------------------------------
+[2025-12-17 13:43:34] ----------------------------------------------------------------
+[2025-12-17 13:43:34] Train @ 40,000 steps
+[2025-12-17 13:43:34]   Episodes (total): 610
+[2025-12-17 13:43:34]   Window(50) mean return (episode-weighted): 4.72 ↓
+[2025-12-17 13:43:34]   Window(50) mean length: 58.5
+[2025-12-17 13:43:34]   Window(50) mean completion: 41.38%
+[2025-12-17 13:43:34]   Uniform-per-context mean return: 4.29
+[2025-12-17 13:43:34]   Uniform-per-context mean completion: 39.62%
+[2025-12-17 13:43:34]   Context distribution (last 50 eps): 0:10% 1:12% 2:10% 3:10% 4:12% 5:12% 6:8% 7:8% 8:8% 9:10%
+[2025-12-17 13:43:34] ----------------------------------------------------------------
+[2025-12-17 13:45:25] ----------------------------------------------------------------
+[2025-12-17 13:45:25] Train @ 60,000 steps
+[2025-12-17 13:45:25]   Episodes (total): 842
+[2025-12-17 13:45:25]   Window(50) mean return (episode-weighted): 4.46 ↓
+[2025-12-17 13:45:25]   Window(50) mean length: 81.7
+[2025-12-17 13:45:25]   Window(50) mean completion: 45.39%
+[2025-12-17 13:45:25]   Uniform-per-context mean return: 4.55
+[2025-12-17 13:45:25]   Uniform-per-context mean completion: 42.81%
+[2025-12-17 13:45:25]   Context distribution (last 50 eps): 0:12% 1:12% 2:10% 3:8% 4:8% 5:8% 6:10% 7:10% 8:10% 9:12%
+[2025-12-17 13:45:25] ----------------------------------------------------------------
+[2025-12-17 13:47:32] ----------------------------------------------------------------
+[2025-12-17 13:47:32] Train @ 80,000 steps
+[2025-12-17 13:47:32]   Episodes (total): 1,129
+[2025-12-17 13:47:32]   Window(50) mean return (episode-weighted): 5.36 ↑
+[2025-12-17 13:47:32]   Window(50) mean length: 73.5
+[2025-12-17 13:47:32]   Window(50) mean completion: 48.02%
+[2025-12-17 13:47:32]   Uniform-per-context mean return: 4.62
+[2025-12-17 13:47:32]   Uniform-per-context mean completion: 43.51%
+[2025-12-17 13:47:32]   Context distribution (last 50 eps): 0:10% 1:10% 2:8% 3:8% 4:8% 5:8% 6:12% 7:12% 8:12% 9:12%
+[2025-12-17 13:47:32] ----------------------------------------------------------------
+[2025-12-17 13:49:24] ----------------------------------------------------------------
+[2025-12-17 13:49:24] Train @ 100,000 steps
+[2025-12-17 13:49:24]   Episodes (total): 1,427
+[2025-12-17 13:49:24]   Window(50) mean return (episode-weighted): 6.32 ↑
+[2025-12-17 13:49:24]   Window(50) mean length: 83.9
+[2025-12-17 13:49:24]   Window(50) mean completion: 53.71%
+[2025-12-17 13:49:24]   Uniform-per-context mean return: 4.75
+[2025-12-17 13:49:24]   Uniform-per-context mean completion: 44.32%
+[2025-12-17 13:49:24]   Context distribution (last 50 eps): 0:12% 1:10% 2:8% 3:6% 4:4% 5:8% 6:16% 7:12% 8:12% 9:12%
+[2025-12-17 13:49:24] ----------------------------------------------------------------
+[2025-12-17 13:50:22] Checkpoint saved at 110,000 steps to logs/mario_inertia_full/multi_1217_121945/seed_3/inertia_1217_133852/checkpoints/ppo_inertia_110000.zip
+[2025-12-17 13:51:30] ----------------------------------------------------------------
+[2025-12-17 13:51:30] Train @ 120,000 steps
+[2025-12-17 13:51:30]   Episodes (total): 1,799
+[2025-12-17 13:51:30]   Window(50) mean return (episode-weighted): 5.42 ↓
+[2025-12-17 13:51:30]   Window(50) mean length: 37.5
+[2025-12-17 13:51:30]   Window(50) mean completion: 41.69%
+[2025-12-17 13:51:30]   Uniform-per-context mean return: 5.64
+[2025-12-17 13:51:30]   Uniform-per-context mean completion: 48.47%
+[2025-12-17 13:51:30]   Context distribution (last 50 eps): 0:12% 1:14% 2:10% 3:10% 4:10% 5:6% 6:4% 7:10% 8:12% 9:12%
+[2025-12-17 13:51:30] ----------------------------------------------------------------
+[2025-12-17 13:53:41] ----------------------------------------------------------------
+[2025-12-17 13:53:41] Train @ 140,000 steps
+[2025-12-17 13:53:41]   Episodes (total): 2,266
+[2025-12-17 13:53:41]   Window(50) mean return (episode-weighted): 5.38 ↓
+[2025-12-17 13:53:41]   Window(50) mean length: 28.8
+[2025-12-17 13:53:41]   Window(50) mean completion: 54.12%
+[2025-12-17 13:53:41]   Uniform-per-context mean return: 6.12
+[2025-12-17 13:53:41]   Uniform-per-context mean completion: 52.00%
+[2025-12-17 13:53:41]   Context distribution (last 50 eps): 0:8% 1:8% 2:12% 3:12% 4:12% 5:14% 6:8% 7:10% 8:8% 9:8%
+[2025-12-17 13:53:41] ----------------------------------------------------------------
+[2025-12-17 13:56:36] ----------------------------------------------------------------
+[2025-12-17 13:56:36] Train @ 160,000 steps
+[2025-12-17 13:56:36]   Episodes (total): 2,831
+[2025-12-17 13:56:36]   Window(50) mean return (episode-weighted): 7.26 ↑
+[2025-12-17 13:56:36]   Window(50) mean length: 26.7
+[2025-12-17 13:56:36]   Window(50) mean completion: 51.45%
+[2025-12-17 13:56:36]   Uniform-per-context mean return: 6.96
+[2025-12-17 13:56:36]   Uniform-per-context mean completion: 55.47%
+[2025-12-17 13:56:36]   Context distribution (last 50 eps): 0:10% 1:12% 2:12% 3:14% 4:14% 5:14% 6:8% 7:2% 8:6% 9:8%
+[2025-12-17 13:56:36] ----------------------------------------------------------------
+[2025-12-17 13:59:11] ----------------------------------------------------------------
+[2025-12-17 13:59:11] Train @ 180,000 steps
+[2025-12-17 13:59:11]   Episodes (total): 3,432
+[2025-12-17 13:59:11]   Window(50) mean return (episode-weighted): 6.50 ↓
+[2025-12-17 13:59:11]   Window(50) mean length: 34.1
+[2025-12-17 13:59:11]   Window(50) mean completion: 54.73%
+[2025-12-17 13:59:11]   Uniform-per-context mean return: 7.06
+[2025-12-17 13:59:11]   Uniform-per-context mean completion: 55.84%
+[2025-12-17 13:59:11]   Context distribution (last 50 eps): 0:10% 1:12% 2:14% 3:12% 4:12% 5:12% 6:8% 7:4% 8:6% 9:10%
+[2025-12-17 13:59:11] ----------------------------------------------------------------
+[2025-12-17 14:01:58] ----------------------------------------------------------------
+[2025-12-17 14:01:58] Train @ 200,000 steps
+[2025-12-17 14:01:58]   Episodes (total): 4,037
+[2025-12-17 14:01:58]   Window(50) mean return (episode-weighted): 6.24 ↓
+[2025-12-17 14:01:58]   Window(50) mean length: 27.0
+[2025-12-17 14:01:58]   Window(50) mean completion: 54.20%
+[2025-12-17 14:01:58]   Uniform-per-context mean return: 7.31
+[2025-12-17 14:01:58]   Uniform-per-context mean completion: 58.95%
+[2025-12-17 14:01:58]   Context distribution (last 50 eps): 0:8% 1:12% 2:12% 3:12% 4:10% 5:12% 6:6% 7:10% 8:10% 9:8%
+[2025-12-17 14:01:58] ----------------------------------------------------------------
+[2025-12-17 14:02:11] Saved training curve to logs/mario_inertia_full/multi_1217_121945/seed_3/inertia_1217_133852/training_curve.json
+[2025-12-17 14:02:11] Saved episode history to logs/mario_inertia_full/multi_1217_121945/seed_3/inertia_1217_133852/episode_history.json
+[2025-12-17 14:02:11] ==================================================
+[2025-12-17 14:02:11] FINAL EVALUATION
+[2025-12-17 14:02:11] ==================================================
+[2025-12-17 14:02:39] ==================================================
+[2025-12-17 14:02:39] FINAL EVALUATION RESULTS [stochastic] (deterministic=False)
+[2025-12-17 14:02:39] ==================================================
+[2025-12-17 14:02:39] Mean Return: 5.64 ± 7.07
+[2025-12-17 14:02:39] Mean Completion: 44.44% ± 36.23%
+[2025-12-17 14:02:39] Success Rate (full level): 24.80%
+[2025-12-17 14:02:39] Mean Episode Length: 12.1
+[2025-12-17 14:02:39] Per generalization-type summary:
+[2025-12-17 14:02:39]   extra: mean_return=4.92, mean_completion=39.08%, success_rate=22.00%, n_episodes=50
+[2025-12-17 14:02:39]   id: mean_return=5.96, mean_completion=47.80%, success_rate=24.00%, n_episodes=50
+[2025-12-17 14:02:39]   interp: mean_return=6.44, mean_completion=48.41%, success_rate=32.00%, n_episodes=25
+[2025-12-17 14:02:39] Per-inertia summary:
+[2025-12-17 14:02:39]   inertia=0.600: mean_return=4.76, mean_completion=39.49%, success_rate=24.00%, n_episodes=25
+[2025-12-17 14:02:39]   inertia=0.850: mean_return=6.96, mean_completion=53.89%, success_rate=28.00%, n_episodes=25
+[2025-12-17 14:02:39]   inertia=1.000: mean_return=6.44, mean_completion=48.41%, success_rate=32.00%, n_episodes=25
+[2025-12-17 14:02:39]   inertia=1.150: mean_return=4.96, mean_completion=41.72%, success_rate=20.00%, n_episodes=25
+[2025-12-17 14:02:39]   inertia=1.400: mean_return=5.08, mean_completion=38.68%, success_rate=20.00%, n_episodes=25
+[2025-12-17 14:02:39] ==================================================
+[2025-12-17 14:02:39] ==================================================
+[2025-12-17 14:02:39] FINAL EVALUATION (TRAIN CONTEXTS)
+[2025-12-17 14:02:39] ==================================================
+[2025-12-17 14:03:38] ==================================================
+[2025-12-17 14:03:38] FINAL EVALUATION RESULTS [train_stochastic] (deterministic=False)
+[2025-12-17 14:03:38] ==================================================
+[2025-12-17 14:03:38] Mean Return: 7.28 ± 7.62
+[2025-12-17 14:03:38] Mean Completion: 56.36% ± 36.41%
+[2025-12-17 14:03:38] Success Rate (full level): 25.00%
+[2025-12-17 14:03:38] Mean Episode Length: 32.3
+[2025-12-17 14:03:38] Per-range summary (collapsed from per-inertia):
+[2025-12-17 14:03:38]   range_0:0.800-0.900: mean_return=4.57, mean_completion=41.29%, success_rate=11.32%, n_episodes=53
+[2025-12-17 14:03:38]   range_1:1.100-1.200: mean_return=10.34, mean_completion=73.35%, success_rate=40.43%, n_episodes=47
+[2025-12-17 14:03:38] (Per-inertia details saved in JSON: 100 values)
+[2025-12-17 14:03:38] ==================================================
+[2025-12-17 14:03:38] Saved final results to logs/mario_inertia_full/multi_1217_121945/seed_3/inertia_1217_133852/final_results.json
+[2025-12-17 14:03:38] Model saved to logs/mario_inertia_full/multi_1217_121945/seed_3/inertia_1217_133852/final_model.zip
+[2025-12-17 14:03:38] ==================================================
+[2025-12-17 14:03:38] SETTING UP TRAINING
+[2025-12-17 14:03:38] ==================================================

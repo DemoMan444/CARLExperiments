@@ -1,0 +1,72 @@
+[
+  {
+    "timesteps": 20000,
+    "mean_return": 6.0,
+    "mean_completion": 0.43748930143399994,
+    "uniform_ctx_mean_return": 3.4947944758678915,
+    "uniform_ctx_mean_completion": 0.32711016613418625
+  },
+  {
+    "timesteps": 40000,
+    "mean_return": 4.72,
+    "mean_completion": 0.41377703932000004,
+    "uniform_ctx_mean_return": 4.29,
+    "uniform_ctx_mean_completion": 0.3962232073532
+  },
+  {
+    "timesteps": 60000,
+    "mean_return": 4.46,
+    "mean_completion": 0.45387710418,
+    "uniform_ctx_mean_return": 4.548,
+    "uniform_ctx_mean_completion": 0.4281322377154001
+  },
+  {
+    "timesteps": 80000,
+    "mean_return": 5.36,
+    "mean_completion": 0.48020611698000004,
+    "uniform_ctx_mean_return": 4.6240000000000006,
+    "uniform_ctx_mean_completion": 0.435144679723
+  },
+  {
+    "timesteps": 100000,
+    "mean_return": 6.32,
+    "mean_completion": 0.53706376676,
+    "uniform_ctx_mean_return": 4.747999999999999,
+    "uniform_ctx_mean_completion": 0.443194765314
+  },
+  {
+    "timesteps": 120000,
+    "mean_return": 5.42,
+    "mean_completion": 0.41688616013999996,
+    "uniform_ctx_mean_return": 5.640000000000001,
+    "uniform_ctx_mean_completion": 0.484658186897
+  },
+  {
+    "timesteps": 140000,
+    "mean_return": 5.38,
+    "mean_completion": 0.5412159894799999,
+    "uniform_ctx_mean_return": 6.120000000000001,
+    "uniform_ctx_mean_completion": 0.520017074212
+  },
+  {
+    "timesteps": 160000,
+    "mean_return": 7.26,
+    "mean_completion": 0.51453916652,
+    "uniform_ctx_mean_return": 6.962000000000001,
+    "uniform_ctx_mean_completion": 0.55466793311
+  },
+  {
+    "timesteps": 180000,
+    "mean_return": 6.5,
+    "mean_completion": 0.54730271178,
+    "uniform_ctx_mean_return": 7.0600000000000005,
+    "uniform_ctx_mean_completion": 0.5583884813232001
+  },
+  {
+    "timesteps": 200000,
+    "mean_return": 6.24,
+    "mean_completion": 0.5419799188200001,
+    "uniform_ctx_mean_return": 7.308,
+    "uniform_ctx_mean_completion": 0.5894806197169999
+  }
+]

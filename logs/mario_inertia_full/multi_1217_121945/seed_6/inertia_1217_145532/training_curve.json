@@ -1,0 +1,72 @@
+[
+  {
+    "timesteps": 20000,
+    "mean_return": 4.48,
+    "mean_completion": 0.46164269373000005,
+    "uniform_ctx_mean_return": 5.243768919848641,
+    "uniform_ctx_mean_completion": 0.4834917462961751
+  },
+  {
+    "timesteps": 40000,
+    "mean_return": 6.36,
+    "mean_completion": 0.57197364986,
+    "uniform_ctx_mean_return": 5.903901763429627,
+    "uniform_ctx_mean_completion": 0.5294969124311547
+  },
+  {
+    "timesteps": 60000,
+    "mean_return": 7.54,
+    "mean_completion": 0.60776848294,
+    "uniform_ctx_mean_return": 6.427999999999999,
+    "uniform_ctx_mean_completion": 0.5595838222292
+  },
+  {
+    "timesteps": 80000,
+    "mean_return": 9.86,
+    "mean_completion": 0.692195267,
+    "uniform_ctx_mean_return": 7.3,
+    "uniform_ctx_mean_completion": 0.6057084729125999
+  },
+  {
+    "timesteps": 100000,
+    "mean_return": 8.32,
+    "mean_completion": 0.65261103452,
+    "uniform_ctx_mean_return": 7.75,
+    "uniform_ctx_mean_completion": 0.6287152157864
+  },
+  {
+    "timesteps": 120000,
+    "mean_return": 8.5,
+    "mean_completion": 0.6320484766800001,
+    "uniform_ctx_mean_return": 8.091999999999999,
+    "uniform_ctx_mean_completion": 0.6333108583635999
+  },
+  {
+    "timesteps": 140000,
+    "mean_return": 8.58,
+    "mean_completion": 0.66025817664,
+    "uniform_ctx_mean_return": 8.193999999999999,
+    "uniform_ctx_mean_completion": 0.6375101854531999
+  },
+  {
+    "timesteps": 160000,
+    "mean_return": 8.94,
+    "mean_completion": 0.6622562691199999,
+    "uniform_ctx_mean_return": 8.200000000000001,
+    "uniform_ctx_mean_completion": 0.643965121818
+  },
+  {
+    "timesteps": 180000,
+    "mean_return": 7.92,
+    "mean_completion": 0.61934690102,
+    "uniform_ctx_mean_return": 8.440000000000001,
+    "uniform_ctx_mean_completion": 0.6539609464072
+  },
+  {
+    "timesteps": 200000,
+    "mean_return": 9.24,
+    "mean_completion": 0.7132917985999999,
+    "uniform_ctx_mean_return": 8.634,
+    "uniform_ctx_mean_completion": 0.6586929730752
+  }
+]
