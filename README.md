@@ -1,5 +1,17 @@
 # Draft
 
+## Setup
+
+Minimal WSL (Ubuntu) setup from a clean shell:
+
+- `sudo apt update && sudo apt install -y git python3 python3-venv python3-pip xvfb`
+- `mkdir -p ~/CARLProject && cd ~/CARLProject`
+- `git clone --recursive https://github.com/automl/CARL.git`
+- `git clone https://github.com/DemoMan444/CARLExperiments.git`
+- `cd ~/CARLProject/CARLExperiments`
+- `python3 -m venv .venv && source .venv/bin/activate`
+- `python -m pip install -U pip && python -m pip install -r requirements.txt`
+
 ## Resuming multi-seed runs after a crash
 
 If WSL shuts down mid multi-seed run, you can resume the latest run directory and only re-run missing seeds:
@@ -29,17 +41,4 @@ Info: experiment with some extra for visualization.py goes together with visuali
 where replace MMDD_HHMM with your own folder name values
 
 3. View visualizations from logs/mario_becnhmark/intertia../figs folder
-
-## Brief instructions for running the game and testing intertia values as player
-
-Goal: See how interia works in the game
-Findings: Intertia only applied to movement not jumping
-
-Instructions:
-
-1. Run it
-2. Press A to decrease (it also resets and applies new inertia)
-3. Press B to increase
-4. If B pressed then press A again, to see changes press at least 2 times B and 1 time A
-5. See how it works
  
