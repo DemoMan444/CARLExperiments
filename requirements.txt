@@ -1,0 +1,11 @@
+gymnasium==0.29.1
+stable-baselines3==2.7.0
+torch>=2.0
+numpy
+matplotlib
+opencv-python
+pillow
+pyvirtualdisplay
+py4j
+
+-e ../CARL[mario]
