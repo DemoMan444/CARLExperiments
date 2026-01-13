@@ -2147,11 +2147,6 @@ def main():
         pass
 
     config = TrainingConfig()
-    # You can toggle these manually if you want:
-    # config.use_context = True          # to feed mario_inertia as input
-    # config.feature_fusion = "hadamard"  # cGate/Hadamard fusion (requires use_context=True)
-    # config.test_on_train_maps = True   # to test only physics shift on same maps
-
     print("FAST ITERATION MODE")  # using print here because log isn't setup yet
 
     try:
